@@ -317,7 +317,40 @@ void bmd_both(struct cbc bot)
 
 int move_servo_to(struct cbc bot , int index , int final)
 {
+	int c_pos = get_servo_position(bot.servo[index].port);
+	if (c_pos < final)
+	{
+		while (c_pos < final)
+		{
+			set_servo_position(bot.servo[index].port , (c_pos += 20));
+			msleep(10);
+			c_pos = get_servo_position(bot.servo[index].port);
+		}
+	}
+	if (c_pos > final)
+	{
+		while (c_pos > final)
+		{
+			set_servo_position(bot.servo[index].port , (c_pos -= 20));
+			msleep(10);
+			c_pos = get_servo_position(bot.servo[index].port);
+		}
+	}
 	
+}
+
+int double_servo_to(struct cbc bot , int s1 , int s2 , int f)
+{
+	int s1_pos = get_servo_position(bot.servo[s1].port);
+	int s2_pos = get_servo_position(bot.servo[s2].port);
+	if (s1_pos >= f && s2_pos >= f)
+	{
+
+	}
+	if (s1_pos <= f && s2_pos <= f)
+	{
+
+	}
 }
 
 int line_follow(struct cbc bot , int l_i , int r_i , int h_speed , int l_speed)

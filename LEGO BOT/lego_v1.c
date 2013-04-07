@@ -1,5 +1,5 @@
 // LEGO BOT
-#include "CBClib.h"
+#include "../CBClib.h"
 
 #define T 450
 
@@ -20,8 +20,8 @@ int main()
 		{
 			//line follow
 			break;
-			break;
 		}
+		break;
 	}
 	// dump that out
 	return 0;
