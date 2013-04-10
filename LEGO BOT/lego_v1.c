@@ -11,6 +11,8 @@ int main()
 	build_left_motor(lego , 2 , 79.04 , 1000 ,  56);
 	build_s_top_hat(lego , 0 , 0);
 	build_s_top_hat(lego , 1 , 1);
+	//build servos
+	//build motors
 	camera_open(LOW_RES);
 	lego.s_top_hat[0].thresh = T;
 	lego.s_top_hat[0].thresh = T;
