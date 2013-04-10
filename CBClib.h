@@ -24,6 +24,7 @@ struct cbc {
 		int ticks;
 		int min;
 		int max;
+		int pos;
 	}servo[6];
 	struct s_analog {
 		int port;
@@ -63,12 +64,12 @@ int msf(struct cbc , int , int , int); // abbreviated motor_spin_for
 int motor_spin_ticks(struct cbc , int , int , int); // motor index , speed , ticks
 int mst(struct cbc , int , int , int); // abbreviated motor_spin_ticks
 void bmd_both(struct cbc); //
-int move_servo_to(struct cbc , int , int); // servo index , servo final position
-int double_servo_to(struct cbc , int , int , int); // servo 1 index , servo 2 index , final position
+int move_servo_to(struct cbc , int , int , int); // servo index , servo final position , step
+int double_servo_to(struct cbc , int , int , int); // servo 1 index , servo 2 index , final position , step
 int average(struct cbc , int , int); // port (analog sensor) , amount of samples
 int ramp_up(struct cbc , float , float); // speed , distance
-int line_follow(struct cbc , int , int , int , int);
-int delay(float);
+int line_follow(struct cbc , int , int , int , int); // left index , right index , high speed , low speed
+int delay(float); // time to delay
 
 
 
@@ -315,42 +316,56 @@ void bmd_both(struct cbc bot)
 	bmd(bot.right.port);
 }
 
-int move_servo_to(struct cbc bot , int index , int final)
+int move_servo_to(struct cbc bot , int index , int final , int step)
 {
-	int c_pos = get_servo_position(bot.servo[index].port);
-	if (c_pos < final)
+	bot.servo[index].pos = get_servo_position(bot.servo[index].port);
+	if (bot.servo[index].pos < final)
 	{
-		while (c_pos < final)
+		while (bot.servo[index].pos < final)
 		{
-			set_servo_position(bot.servo[index].port , (c_pos += 20));
+			set_servo_position(bot.servo[index].port , (bot.servo[index].pos += step));
 			msleep(10);
-			c_pos = get_servo_position(bot.servo[index].port);
+			bot.servo[index].pos = get_servo_position(bot.servo[index].port);
 		}
 	}
-	if (c_pos > final)
+	if (bot.servo[index].pos > final)
 	{
-		while (c_pos > final)
+		while (bot.servo[index].pos > final)
 		{
-			set_servo_position(bot.servo[index].port , (c_pos -= 20));
+			set_servo_position(bot.servo[index].port , (bot.servo[index].pos -= step));
 			msleep(10);
-			c_pos = get_servo_position(bot.servo[index].port);
+			bot.servo[index].pos = get_servo_position(bot.servo[index].port);
 		}
 	}
+	if (bot.servo[index].pos == final)
+		return 0;
+	return 0;
 	
 }
 
-int double_servo_to(struct cbc bot , int s1 , int s2 , int f)
+int double_servo_to(struct cbc bot , int s1 , int s2 , int final , int step)
 {
-	int s1_pos = get_servo_position(bot.servo[s1].port);
-	int s2_pos = get_servo_position(bot.servo[s2].port);
-	if (s1_pos >= f && s2_pos >= f)
+	bot.servo[s1].pos = get_servo_position(bot.servo[s1].port);
+	bot.servo[s2].pos = get_servo_position(bot.servo[s2].port);
+	if (bot.servo[s1].pos <= final && bot.servo[s2].pos <= final)
 	{
-
+		set_servo_position(bot.servo[s1].port , (bot.servo[s1].pos += step));
+		set_servo_position(bot.servo[s2].port , (bot.servo[s2].pos += step));
+		msleep(10);
+		bot.servo[s1].pos = get_servo_position(bot.servo[s1].port);
+		bot.servo[s2].pos = get_servo_position(bot.servo[s2].port);
 	}
-	if (s1_pos <= f && s2_pos <= f)
+	if (bot.servo[s1].pos <= final && bot.servo[s2].pos <= final)
 	{
-
+		set_servo_position(bot.servo[s1].port , (bot.servo[s1].pos -= step));
+		set_servo_position(bot.servo[s2].port , (bot.servo[s2].pos -= step));
+		msleep(10);
+		bot.servo[s1].pos = get_servo_position(bot.servo[s1].port);
+		bot.servo[s2].pos = get_servo_position(bot.servo[s2].port);
 	}
+	if (bot.servo[s1].pos == final && bot.servo[s2].pos == final)
+		return 0;
+	return 0;
 }
 
 int line_follow(struct cbc bot , int l_i , int r_i , int h_speed , int l_speed)

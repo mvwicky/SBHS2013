@@ -1,14 +1,16 @@
 // LEGO BOT
 #include "../CBClib.h"
 
-#define T 450
+#define T 200
+#define L_PORT 0 
+#define R_PORT 2
 
 int main()
 {
 	lego.motors_started = 0;
 	lego.servos_started = 0;
-	build_left_motor(lego , 0 ,  79.04 , 1000 ,  56);
-	build_left_motor(lego , 2 , 79.04 , 1000 ,  56);
+	build_left_motor(lego , L_PORT ,  79.04 , 1000 ,  56);
+	build_right_motor(lego , R_PORT , 79.04 , 1000 ,  56);
 	build_s_top_hat(lego , 0 , 0);
 	build_s_top_hat(lego , 1 , 1);
 	//build servos
