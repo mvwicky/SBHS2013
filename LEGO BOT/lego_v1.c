@@ -9,8 +9,12 @@ int main()
 {
 	lego.motors_started = 0;
 	lego.servos_started = 0;
-	build_left_motor(lego , L_PORT ,  79.04 , 1000 ,  56);
-	build_right_motor(lego , R_PORT , 79.04 , 1000 ,  56);
+	int l = build_left_motor(lego , L_PORT ,  79.04 , 1000 ,  56);
+	int r = build_right_motor(lego , R_PORT , 79.04 , 1000 ,  56);
+	if (l == -1 || r == -1)
+	{
+		printf("Problem assigning motor\n");
+	}
 	build_s_top_hat(lego , 0 , 0);
 	build_s_top_hat(lego , 1 , 1);
 	//build servos
