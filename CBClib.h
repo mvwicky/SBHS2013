@@ -65,7 +65,7 @@ int motor_spin_ticks(struct link , int , int , int); // motor index , speed , ti
 int mst(struct link , int , int , int); // abbreviated motor_spin_ticks
 void bmd_both(struct link); //
 int move_servo_to(struct link , int , int , int); // servo index , servo final position , step
-int double_servo_to(struct link , int , int , int); // servo 1 index , servo 2 index , final position , step
+int double_servo_to(struct link , int , int , int , int); // servo 1 index , servo 2 index , final position , step
 int average(int , int); // port (analog sensor) , amount of samples
 int ramp_up(struct link , float , float); // speed , distance
 int line_follow(struct link , int , int , int , int); // left index , right index , high speed , low speed
@@ -208,45 +208,51 @@ int drive_straight(struct link bot , int speed , int distance)
 }
 
 int drive_arc(struct link bot , int speed , float radius , float angle , int direction)
+// this code makes the bot drive in an arc 
+// args = struct containing the bot , base speed , raduis of circle (mm) , angle (degrees) , direction 1 = CCW -1 = CW
 {
-	float S = arc_length(angle , radius);
-	float sinner;
-	float souter;
-	float in_ticks;
-	float out_ticks;
-	float sprop;
-	float lspeed;
-	float rspeed;
+	if (speed > 1000 || speed < 0 || radius < bot.left.radius_to_middle || radius < bot.right.radius_to_middle)
+	{
+		return -1;
+	}
+	float S = arc_length(angle , radius); // base arc length
+	float sinner; // variable to contain inner arc length
+	float souter; // variable to contain outer arc length
+	float in_ticks; // amount of ticks the inner motor will move
+	float out_ticks; // amount of ticks the outer motor will move
+	float sprop; // will contain the proportion between the outer and inner arc lengths
+	float lspeed; // will contain left motor speed
+	float rspeed; // will contain right motor speed
 	if (direction == 1) // CCW
 	{
-		sinner = arc_length((radius - bot.left.radius_to_middle) , angle);
-		souter = arc_length((radius + bot.right.radius_to_middle) , angle);
-		sprop = souter/sinner;
-		in_ticks = mm_to_ticks(bot , sinner);
-		out_ticks = mm_to_ticks(bot , souter);
-		lspeed = (float)speed * sprop * (souter / S);
-		rspeed = (float)speed * sprop * (sinner / S);
-		mrp(bot.right.port , (int)rspeed , (int)in_ticks);
-		mrp(bot.left.port , (int)lspeed , (int)out_ticks);
-		bmd_both(bot);
-		return 0;
+		sinner = arc_length((radius - bot.left.radius_to_middle) , angle); // compute inner arc length
+		souter = arc_length((radius + bot.right.radius_to_middle) , angle); // compute outer arc length
+		sprop = souter/sinner; // compute the ratio between the outer and inner arc lengths
+		in_ticks = mm_to_ticks(bot , sinner); // compute inner ticks
+		out_ticks = mm_to_ticks(bot , souter); // compute outer ticks
+		lspeed = (float)speed * sprop * (souter / S); // compute left motor speed
+		rspeed = (float)speed * sprop * (sinner / S); // compute right motor speed
+		mrp(bot.right.port , (int)rspeed , (int)in_ticks); // move right 
+		mrp(bot.left.port , (int)lspeed , (int)out_ticks); // move left
+		bmd_both(bot); // bmd
+		return 0; // executed succesfully
 	}
 	if (direction == -1) // CW
 	{
-		sinner = arc_length((radius - bot.right.radius_to_middle) , angle);
-		souter = arc_length((radius + bot.left.radius_to_middle) , angle);
-		sprop = souter/sinner;
-		in_ticks = mm_to_ticks(bot , sinner);
-		out_ticks = mm_to_ticks(bot , souter);
-		lspeed = (float)speed  * sprop * (sinner / S);
-		rspeed = (float)speed * sprop * (souter / S);
-		mrp(bot.right.port , (int)rspeed , (int)in_ticks);
-		mrp(bot.left.port , (int)lspeed , (int)out_ticks);
-		bmd_both(bot);
-		return 0;
+		sinner = arc_length((radius - bot.right.radius_to_middle) , angle); // compute inner arc length
+		souter = arc_length((radius + bot.left.radius_to_middle) , angle); // compute outer arc length
+		sprop = souter/sinner; // compute the ratio between outer and inner arc lengths
+		in_ticks = mm_to_ticks(bot , sinner); // compute inner ticks
+		out_ticks = mm_to_ticks(bot , souter); // compute outer ticks
+		lspeed = (float)speed  * sprop * (sinner / S); // compute left motor speed
+		rspeed = (float)speed * sprop * (souter / S); // compute right motor speed
+		mrp(bot.right.port , (int)rspeed , (int)in_ticks); // move right
+		mrp(bot.left.port , (int)lspeed , (int)out_ticks); // move left
+		bmd_both(bot); // bmd
+		return 0; // executed succesfully
 	}
 	if (direction != 1 && direction != -1)
-		return -1;
+		return -1; // did not execute successfully
 }
 
 int drive_spin(struct link bot , int speed , float angle , int direction)
@@ -399,8 +405,8 @@ int line_follow(struct link bot , int l_i , int r_i , int h_speed , int l_speed)
 // function to follow a black line, uses variables from the link struct
 // args = struct containing variables for link control , index of left sensor , index of right motor , high speed , low speed
 {
-	bot.s_top_hat[l_i].value = average(bot.s_top_hat[l_i].port); // assign left value
-	bot.s_top_hat[r_i].value = average(bot.s_top_hat[r_i].port); // assign right value
+	bot.s_top_hat[l_i].value = average(bot.s_top_hat[l_i].port , 5); // assign left value
+	bot.s_top_hat[r_i].value = average(bot.s_top_hat[r_i].port , 5); // assign right value
 	if (bot.s_top_hat[l_i].value > 1023 || bot.s_top_hat[l_i].value < 0 || bot.s_top_hat[r_i].value > 1023 || bot.s_top_hat[r_i].value < 0)
 	{ // these braces are not necessary but maintain flow
 		return -1; //did not execute properly
