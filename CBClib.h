@@ -5,26 +5,25 @@
 #define E 2.71828182845
 #define DEG_TO_RAD (PI / 180)
 
-struct link {
-	int motors_started;
-	int servos_started;
-	struct drive_motors {
-		int port;
-		float radius_to_middle;
-		int ticks;
-		float diameter;
-	}left , right;
-	struct gen_motor {
-		int port;
-		int ticks;
-		float diameter;
-	}gen[4];
-	struct servo {
-		int port;
-		int ticks;
-		int min;
-		int max;
-		int pos;
+struct link { 
+	int motors_started; // the amount of motors that have been initialized
+	int servos_started; // the amount of servos that have been initialized
+	struct drive_motors { // structure for the bot's main drive motors 
+		int port; // port of motor
+		float radius_to_middle; // distance to the middle of the bot from the outside of the wheel.
+		int ticks; // amount of ticks in one revolution
+		float diameter; // diameter of the wheel
+	}left , right; // two are initialized, left and right
+	struct gen_motor { // structure for motors that aren't drive motors 
+		int port; // port
+		int ticks; // amount of ticks in a revolution
+	}gen[4]; // four are initialized. NOTE: if both drive motors are used then only two can be used
+	struct servo { // struct for servos
+		int port; // port
+		int ticks; // amount of ticks possible
+		int min; // minimum ticks (0)
+		int max; // maximum ticks (2047)
+		int pos; // 
 	}servo[6];
 	struct s_analog {
 		int port;
@@ -446,4 +445,3 @@ int delay(float t)
 }
 
 #endif 
-
