@@ -81,7 +81,7 @@ int build_left_motor(struct link bot , int port , float radius , int ticks , flo
 	bot.left.ticks = ticks;
 	bot.left.diameter = diameter;
 	bot.motors_started += 1;
-	return 0;
+	return bot.left.port;
 }
 
 int build_right_motor(struct link bot , int port , float radius , int ticks , float diameter)
@@ -93,7 +93,7 @@ int build_right_motor(struct link bot , int port , float radius , int ticks , fl
 	bot.right.ticks = ticks;
 	bot.right.diameter = diameter;
 	bot.motors_started += 1;
-	return 0;
+	return bot.right.port;
 }
 
 int build_gen_motor(struct link bot , int index , int port , int ticks)
@@ -103,7 +103,7 @@ int build_gen_motor(struct link bot , int index , int port , int ticks)
 	bot.gen[index].port = port;
 	bot.gen[index].ticks = ticks;
 	bot.motors_started += 1;
-	return 0;
+	return index;
 }
 
 int build_servo(struct link bot , int index , int port , int ticks , int min , int max)
@@ -115,7 +115,7 @@ int build_servo(struct link bot , int index , int port , int ticks , int min , i
 	bot.servo[index].min = min;
 	bot.servo[index].max = max;
 	bot.servos_started += 1;
-	return 0;
+	return index;
 }
 
 int build_top_hat(struct link bot , int port , int thresh)
