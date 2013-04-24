@@ -30,6 +30,7 @@ int main()
 	int arm_servo = 1; // servo of the pom getter arm
 	int push_servo = 2; // servo of the pusher arm
 	int basket_servo = 0; // servo of the basket
+	int middle_hat = 0;
 	int left_motor = build_left_motor(lego , 0 , 79,04 , 1000 , 56); // sets up the left drive motor
 	int right_motor = build_right_motor(lego , 1 , 79.04 , 1000 , 56); // sets up the right drive motor
 	camera_open(LOW_RES); // opens the camera
@@ -50,6 +51,7 @@ int main()
 	while (poms_collected < 4) // there are four piles of poms
 	{
 		pickup = false; // the arm hasn't been engaged
+
 		if (get_object_area(0 , 1) > SIZE) // if a big pile of orange poms is seen
 		{
 			while (pickup == false) // while the arm hasn't been engaged 
@@ -73,7 +75,36 @@ int main()
 					set_servo_position(1 , UP);
 					msleep(1000);
 					poms_collected += 1;
-					pickup = true;
+					drive_spin(lego , 90 , -1);
+					while (pickup == false)
+					{
+						camera_update();
+						current_coords[0] = get_object_center(0 , 0).x; // updates the current coordinates (x)
+						current_coords[1] = get_object_center(0 , 0).y; // updates the current coordinates (y)
+						printf("Current = (%d , %d)" , current_coords[0] , current_coords[1]);
+						printf(" Target = (%d , %d)\n" , (target_coords[0] + 2) , (target_coords[1] + 30));
+						msleep(10);
+						x_in = (current_coords[0] == target_coords[0]) || (current_coords[0] >= (target_coords[0] - TOL) && (current_coords[0] <= target_coords[0] + TOL);
+						// is true if the x coordinate is equal to the target or within a ten unit range (5 on each side)
+						y_in = (current_coords[1] == target_coords[1]) || (current_coords[1] >= (target_coords[1] - TOL) && (current_coords[1] <= target_coords[1] + TOL);
+						// is true if the y coordinate is equal to the target or within a ten unit range (5 on each side)
+						camera_move_y(); // move in the x
+						camera_move_x(); // move in the y
+						if (x_in == true && y_in == true)
+						{
+							set_servo_position(1 , DOWN);
+							msleep(1000);
+							set_servo_position(1 , UP);
+							msleep(1000);
+							poms_collected += 1;
+							pickup == true;
+							while (analog10(middle_hat) < THRESH)
+							{
+								mav(left_motor , -500)
+								mav(right_motor , 500)
+							}
+						}
+					}
 				}
 		}
 		}
