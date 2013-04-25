@@ -86,7 +86,7 @@ int main()
 				break;
 		}
 	}
-	while (1)
+	while (1) // position to get the pom
 	{
 		camera_move_y();
 		camera_move_x();
@@ -115,7 +115,7 @@ int main()
 				break;
 		}
 	}
-	while (1)
+	while (1) // position to get the pom
 	{
 		camera_move_y();
 		camera_move_x();
@@ -134,7 +134,19 @@ int main()
 	set_servo_position(arm_servo , ARM_UP);
 	msleep(500);
 	poms_collected += 1;
-
+}
+while (1)
+{
+	mav(lego.left.port , -400);
+	mav(lego.left.port , -400);
+	if (get_middle() > THRESH)
+	{
+		break;
+	}
+}
+while (1)
+{
+	
 }
 
 inline int camera_move_x()
