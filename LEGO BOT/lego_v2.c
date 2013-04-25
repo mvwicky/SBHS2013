@@ -46,8 +46,9 @@ int main()
 		camera_update();
 		target_coords[0] = get_object_center(0 , 0).x; // sets target coordinates (x)
 		target_coords[1] = get_object_center(0 , 0).y; // sets target coordinates (y)
-		msleep(10);
 		printf("(%d , %d)\n" , target_coords[0] , target_coords[1]);
+		msleep(10);
+		display_clear();
 	}
 	enable_servo(arm_servo); // enable the arm servo
 	set_servo_position(arm_servo , UP); // set the arm servo up
