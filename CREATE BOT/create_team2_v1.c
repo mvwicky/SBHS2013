@@ -21,7 +21,7 @@ int t_line_follow(int left , int middle , int right)
 	}
 	if (left_sens > THRESH && middle_sense < THRESH && right_sense < THRESH) // 1 , 0 , 0
 	{
-
+		create_drive_direct(-100 , 500);
 	}
 	if (left_sens < THRESH && middle_sense > THRESH && right_sense < THRESH) // 0 , 1 , 0
 	{
@@ -37,7 +37,7 @@ int t_line_follow(int left , int middle , int right)
 	}
 	if (left_sens < THRESH && middle_sense > THRESH && right_sense > THRESH) // 0 , 1 , 1
 	{
-		
+
 	}
 	if (left_sens > THRESH && middle_sense > THRESH && right_sense > THRESH) // 1 , 1 , 1
 	{
