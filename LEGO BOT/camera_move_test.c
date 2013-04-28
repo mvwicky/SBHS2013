@@ -10,6 +10,7 @@
 
 inline int camera_move_x();
 inline int camera_move_y();
+inline void coord_update();
 
 struct coords {
 	int x;
@@ -23,77 +24,75 @@ bool y_in = false; // checks if the y coordinate of the pom is correct
 
 int main()
 {
-	int left_motor = build_left_motor(lego , 0 , 79.04 , 1000 , 56); // sets up the left drive motor
-	int right_motor = build_right_motor(lego , 1 , 79.04 , 1000 , 56); // sets up the right drive motor
+	lego.left.port = 0;
+	lego.right.port = 2;
 	camera_open(LOW_RES);
-	camera_update();
+	coord_update();
 	printf("\nPress B to set Location\n");
 	while (b_button() == 0) // press the b button to set the coordinates
 	{
-		camera_update();
+		coord_update();
 		target.x = get_object_center(0 , 0).x; // sets target coordinates (x)
 		target.y = get_object_center(0 , 0).y; // sets target coordinates (y)
-		printf(0 , 1 , "(%d , %d)\n" , target.x , target.y);
+		printf("(%d , %d)\n" , target.x , target.y);
 		msleep(10);
+	}
+	while (c_button() == 0)
+	{
+		camera_update();
+		printf("Orange Size = %d\n" , get_object_center(1 , 0));
+		printf("Green Size = %d\n" , get_object_center(0 , 0));
 	}
 	enable_servo(arm_servo);
 	set_servo_position(arm_servo , ARM_UP);
 	printf("(%d , %d)\n" , target.x , target.y);
 	while(a_button() == 0);
+		coord_update();
 	while (1) // position to get the pom
 	{
-		camera_update();
-		current.x = get_object_center(0 , 0).x;
-		current.y = get_object_center(0 , 0).y;
+		coord_update();
 		printf("(%d , %d) , (%d , %d)\n" , target.x , target.y , current.x , current.y);
 		x_in = (current.x >= (target.x - TOL) && (current.x <= target.x + TOL));
 		// is true if the x coordinate is equal to the target or within a ten unit range (5 on each side)
 		y_in = (current.y >= (target.y - TOL) && (current.y <= target.y + TOL));
 		// is true if the y coordinate is equal to the target or within a ten unit range (5 on each side)
-		/*
 		if ((current.y >= (target.y - TOL) && (current.y <= target.y + TOL)) && (current.x >= (target.x - TOL) && (current.x <= target.x + TOL)))
 		{
+			ao();
 			printf("IN POS\n");
+			set_servo_position(arm_servo , ARM_DOWN);
+			msleep(500);
+			set_servo_position(arm_servo , ARM_UP);
+			msleep(500);
 			break;
 		}
 		camera_move_y();
 		camera_move_x();
-		*/
-		
-	}	
-	set_servo_position(arm_servo , ARM_DOWN);
-	msleep(500);
-	set_servo_position(arm_servo , ARM_UP);
-	msleep(500);
-
-
+	}
 }
 
 
 inline int camera_move_x()
 {
-	int lspeed = -300;
-	int hspeed = 300;
-	camera_open(LOW_RES);
-	camera_update();
+	int lspeed = -150;
+	int hspeed = 150;
+	coord_update();
 	printf("MOVING X\n");
-	if (get_object_center(0 , 0).x < target.x)
+	if (current.x < target.x)
 	{
 		printf("LEFT\n");
 		mav(lego.left.port , lspeed);
 		mav(lego.right.port , hspeed);
-		msleep(10);
 		return 1;
 	}
-	if (get_object_center(0 , 0).x > target.x)
+	if (current.x > target.x)
 	{
 		printf("RIGHT\n");
 		mav(lego.left.port , hspeed);
 		mav(lego.right.port , lspeed);
-		msleep(10);
 		return 1;
 	}
-	if (get_object_center(0 , 0).x >= target.x && get_object_center(0 , 0).x <= target.x)
+	if (current.x >= (target.x - TOL) && current.x <= (target.x + TOL))
 	{
 		return 0;
 	}
@@ -101,32 +100,33 @@ inline int camera_move_x()
 
 inline int camera_move_y()
 { 	
-	camera_open(LOW_RES);
-	camera_update();
-	int speed = 200;
-	int back = -200;
-	camera_open(LOW_RES);
-	camera_update();
-	if (get_object_center(0 , 0).y > target.y)
+	int speed = 150;
+	int back = -150;
+	coord_update();
+	if (current.y > target.y)
 	{
 		printf("TOO CLOSE\n");
 		mav(lego.left.port , back);
 		mav(lego.right.port , back);
-		msleep(10);
 		return 1;
 	}
-	if (get_object_center(0 , 0).y < target.y)
+	if (current.y < target.y)
 	{
 		printf("TOO FAR\n");
 		mav(lego.left.port , speed);
-		mav(lego.left.port , speed);
-		msleep(10);
+		mav(lego.right.port , speed);
 		return 1;
 	}
-	if (get_object_center(0 , 0).y >= target.y && get_object_center(0 , 0).y <= target.y)
+	if (current.y >= (target.y - TOL) && current.y <= (target.y + TOL))
 	{
 		printf("GOLDILOCKS\n");
 		return 0;
 	}
 }
 
+inline void coord_update()
+{
+	camera_update();
+	current.x = get_object_center(0 , 0).x;
+	current.y = get_object_center(0 , 0).y;
+}

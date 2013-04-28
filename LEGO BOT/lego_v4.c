@@ -58,8 +58,8 @@ bool pickup = false;
 
 int main()
 {
-	int left_motor = build_left_motor(lego , 0 , 79.04 , 1000 , 56); // sets up the left drive motor
-	int right_motor = build_right_motor(lego , 2 , 79.04 , 1000 , 56); // sets up the right drive motor
+	lego.left.port = 0;
+	lego.right.port = 2;
 	camera_open(LOW_RES);
 	camera_update();
 	printf("\nPress B to set Location\n");
@@ -71,10 +71,6 @@ int main()
 		printf("(%d , %d)\n" , target.x , target.y);
 		msleep(10);
 	}
-	while (side_button() == 0)
-	{
-		t_line_follow();
-	}
 	enable_servo(arm_servo);
 	enable_servo(push_servo);
 	enable_servo(basket_servo);
@@ -85,14 +81,11 @@ int main()
 	// wait_for_light(1);
 	while (a_button() == 0)
 		coord_update(); // for testing, use wait for light for the actual game
-	/*
 	while (get_middle() > THRESH)
 	{
 		mav(lego.left.port , 500);
 		mav(lego.right.port , 500);
 	}
-	drive_spin(lego , 500 , 90 , -1);
-	*/
 	while (1)
 	{
 		t_line_follow();
@@ -118,131 +111,8 @@ int main()
 			poms_collected += 1;
 			break;
 		}
-	}	
-	while (1)
-	{
-		mav(lego.left.port , 300);
-		mav(lego.right.port , -300);
-		if (get_object_area(1 , 0) > OSIZE)
-		{
-			if (get_object_area(0 , 0) > GSIZE)
-				break;
-		}
 	}
-	while (1) // position to get the pom
-	{
-		camera_move_y();
-		camera_move_x();
-		x_in = (target.x >= (target.x - TOL) && (target.x <= target.x + TOL));
-		// is true if the x coordinate is equal to the target or within a ten unit range (5 on each side)
-		y_in = (target.y >= (target.y - TOL) && (target.y <= target.y + TOL));
-		// is true if the y coordinate is equal to the target or within a ten unit range (5 on each side)
-		if (y_in == true)
-		{
-			if (x_in == true)
-				break;
-		}	
-	set_servo_position(arm_servo , ARM_DOWN);
-	msleep(500);
-	set_servo_position(arm_servo , ARM_UP);
-	msleep(500);
-	poms_collected += 1;
-	}
-	while (1) // back up to line
-	{
-		mav(lego.left.port , -400);
-		mav(lego.left.port , -400);
-		if (get_middle() > THRESH)
-			break;
-	}
-	while (1) // drive to the skycrane
-	{ 
-		t_line_follow();
-		if (get_object_area(0 , 0) > SSIZE)
-			break;
-	}
-	// move around the skycrane
-	// move
-	while (1) // drive to line
-	{
-		mav(lego.left.port , 400);
-		mav(lego.left.port , 400);
-		if (get_middle() > THRESH)
-			break;
-	}
-	while (1)
-	{
-		t_line_follow();
-		if (get_object_area(1 , 0) > OSIZE)
-		{
-			if (get_object_area(0 , 0) > GSIZE)
-				break;
-		}
-	}
-	while (1) // position to get the pom
-	{
-		camera_move_y();
-		camera_move_x();
-		x_in = (target.x >= (target.x - TOL) && (target.x <= target.x + TOL));
-		// is true if the x coordinate is equal to the target or within a ten unit range (5 on each side)
-		y_in = (target.y >= (target.y - TOL) && (target.y <= target.y + TOL));
-		// is true if the y coordinate is equal to the target or within a ten unit range (5 on each side)
-		if (y_in == true)
-		{
-			if (x_in == true)
-				break;
-		}
-	}	
-	set_servo_position(arm_servo , ARM_DOWN);
-	msleep(500);
-	set_servo_position(arm_servo , ARM_UP);
-	msleep(500);
-	poms_collected += 1;
-	while (1)
-	{
-		mav(lego.left.port , 300);
-		mav(lego.right.port , -300);
-		if (get_object_area(1 , 0) > OSIZE)
-		{
-			if (get_object_area(0 , 0) > GSIZE)
-				break;
-		}
-	}
-	while (1) // position to get the pom
-	{
-		camera_move_y();
-		camera_move_x();
-		x_in = (target.x >= (target.x - TOL) && (target.x <= target.x + TOL));
-		// is true if the x coordinate is equal to the target or within a ten unit range (5 on each side)
-		y_in = (target.y >= (target.y - TOL) && (target.y <= target.y + TOL));
-		// is true if the y coordinate is equal to the target or within a ten unit range (5 on each side)
-		if (y_in == true)
-		{
-			if (x_in == true)
-				break;
-		}	
-	set_servo_position(arm_servo , ARM_DOWN);
-	msleep(500);
-	set_servo_position(arm_servo , ARM_UP);
-	msleep(500);
-	poms_collected += 1;
-	}
-	while (1) // back up to line
-	{
-		mav(lego.left.port , -400);
-		mav(lego.left.port , -400);
-		if (get_middle() > THRESH)
-			break;
-	}
-	while (1) // drive to the skycrane
-	{ 
-		t_line_follow();
-		if (get_object_area(0 , 0) > SSIZE)
-			break;
-	}
-	// move around the skycrane
-	// move
-}
+}	
 inline int camera_move_x()
 {
 	int lspeed = -150;
@@ -363,8 +233,8 @@ int t_line_follow()
 	}
 	if (get_left() > THRESH && get_middle() > THRESH && get_right() > THRESH) // 1 , 1 , 1
 	{
-		mav(lego.left.port , -LOW);
-		mav(lego.right.port , LOW);
+		mav(lego.left.port , LOW);
+		mav(lego.right.port , -LOW);
 		msleep(10);
 		return 0;
 	}

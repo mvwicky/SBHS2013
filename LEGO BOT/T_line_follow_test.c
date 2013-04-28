@@ -50,49 +50,49 @@ int t_line_follow()
 	if (get_left() < THRESH && get_middle() < THRESH && get_right() < THRESH) // 0 , 0 , 0 // spin in place
 	{
 		mav(0 , LOW);
-		mav(1 , -LOW);
+		mav(2 , -LOW);
 		msleep(10);
 		return 0;
 	}
 	if (get_left() > THRESH && get_middle() < THRESH && get_right() < THRESH) // 1 , 0 , 0 // 
 	{
 		mav(0 , LOW);
-		mav(1 , HIGH);
+		mav(2 , HIGH);
 		msleep(10);
 		return 0;
 	}
 	if (get_left() < THRESH && get_middle() > THRESH && get_right() < THRESH) // 0 , 1 , 0
 	{
 		mav(0 , HIGH);
-		mav(1 , HIGH);
+		mav(2 , HIGH);
 		msleep(10);
 		return 0;
 	}
 	if (get_left() < THRESH && get_middle() < THRESH && get_right() > THRESH) // 0 , 0 , 1
 	{
 		mav(0 , HIGH);
-		mav(1 , LOW);
+		mav(2 , LOW);
 		msleep(10);
 		return 0;
 	}  
 	if (get_left() > THRESH && get_middle() > THRESH && get_right() < THRESH) // 1 , 1 , 0
 	{
 		mav(0 , HIGH);
-		mav(1 , LOW);
+		mav(2 , LOW);
 		msleep(10);
 		return 0;
 	}
 	if (get_left() < THRESH && get_middle() > THRESH && get_right() > THRESH) // 0 , 1 , 1
 	{
 		mav(0 , HIGH);
-		mav(1 , LOW);
+		mav(2 , LOW);
 		msleep(10);
 		return 0;
 	}
 	if (get_left() > THRESH && get_middle() > THRESH && get_right() > THRESH) // 1 , 1 , 1
 	{
 		mav(0 , -LOW);
-		mav(1 , LOW);
+		mav(2 , LOW);
 		msleep(10);
 		return 0;
 	}
