@@ -15,10 +15,16 @@
 inline int camera_move_x();
 inline int camera_move_y();
 inline void coord_update();
+inline int get_left();
+inline int get_middle();
+inline int get_right();
+int t_line_follow();
 
-struct coords {
-	int x;
-	int y;
+struct blob_info {
+	int x; // x coordinate
+	int y; // y coordinate
+	int gsize; // size of green blob
+	int osize; // size of orange blob
 }current , target;
 // stores the coordinates currently read (for the green pom)
 // stores the coordinates needed (for the green pom)
@@ -27,6 +33,11 @@ int push_servo = 0; // servo of the pusher arm
 int basket_servo = 2;
 bool x_in = false; // checks if the x coordinate of the pom is corrent
 bool y_in = false; // checks if the y coordinate of the pom is correct
+int left_s = 5; // port for the left top hat sensor
+int right_s = 3; // port for the right top hat sensor
+int middle_s = 6; // port for the middle top hat sensor
+int osize; // size of the orange blob needed for detection (set below)
+int gsize; // size of the green blob needed for detection (set below)
 
 
 int main()
@@ -50,14 +61,8 @@ int main()
 		printf("Orange Size = %d\n" , get_object_center(1 , 0));
 		printf("Green Size = %d\n" , get_object_center(0 , 0));
 	}
-	while (get_object_area(0 , 0) < GSIZE && get_object_area(1 , 0) < OSIZE)
-	{
-		camera_update();
-		mav(lego.left.port , 500);
-		mav(lego.right.port , 500);
-		msleep(10);
-	}
-	printf("IN RANGE , O = %d , G = %d\n" ,get_object_area(1 , 0) , get_object_area(0 , 0)); 
+	while (
+	//printf("IN RANGE , O = %d , G = %d\n" ,get_object_area(1 , 0) , get_object_area(0 , 0)); 
 	enable_servo(arm_servo);
 	enable_servo(push_servo);
 	enable_servo(basket_servo);
@@ -219,3 +224,74 @@ inline void coord_update()
 	current.x = get_object_center(0 , 0).x;
 	current.y = get_object_center(0 , 0).y;
 }
+
+
+inline int get_left()
+{
+	return analog10(left_s);
+}
+
+inline int get_middle()
+{
+	return analog10(middle_s);
+}
+
+inline int get_right()
+{
+	return analog10(right_s);
+}
+
+int t_line_follow()
+{
+	if (get_left() < THRESH && get_middle() < THRESH && get_right() < THRESH) // 0 , 0 , 0 // spin in place
+	{
+		mav(lego.left.port , LOW);
+		mav(lego.right.port , -LOW);
+		msleep(10);
+		return 0;
+	}
+	if (get_left() > THRESH && get_middle() < THRESH && get_right() < THRESH) // 1 , 0 , 0 // 
+	{
+		mav(lego.left.port , LOW);
+		mav(lego.right.port , HIGH);
+		msleep(10);
+		return 0;
+	}
+	if (get_left() < THRESH && get_middle() > THRESH && get_right() < THRESH) // 0 , 1 , 0
+	{
+		mav(lego.left.port , HIGH);
+		mav(lego.right.port , HIGH);
+		msleep(10);
+		return 0;
+	}
+	if (get_left() < THRESH && get_middle() < THRESH && get_right() > THRESH) // 0 , 0 , 1
+	{
+		mav(lego.left.port , HIGH);
+		mav(lego.right.port , LOW);
+		msleep(10);
+		return 0;
+	}  
+	if (get_left() > THRESH && get_middle() > THRESH && get_right() < THRESH) // 1 , 1 , 0
+	{
+		mav(lego.left.port , HIGH);
+		mav(lego.right.port , LOW);
+		msleep(10);
+		return 0;
+	}
+	if (get_left() < THRESH && get_middle() > THRESH && get_right() > THRESH) // 0 , 1 , 1
+	{
+		mav(lego.left.port , HIGH);
+		mav(lego.right.port , LOW);
+		msleep(10);
+		return 0;
+	}
+	if (get_left() > THRESH && get_middle() > THRESH && get_right() > THRESH) // 1 , 1 , 1
+	{
+		mav(lego.left.port , LOW);
+		mav(lego.right.port , -LOW);
+		msleep(10);
+		return 0;
+	}
+	return 0;
+}
+

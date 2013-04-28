@@ -1,4 +1,4 @@
-// third version of team 1 (0639) link bot code
+// fourth version of team 1 (0639) link bot code
 // in this version I strive for: consistent naming
 //								 clean code
 //								 good, clear flow
