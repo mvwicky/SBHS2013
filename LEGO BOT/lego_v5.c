@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include "../CBClib.h"
 
 #define ARM_DUMP 200 // up for the pom getter arm
@@ -8,17 +7,24 @@
 #define B_DOWN 750 // down for the basket (dumping)
 #define P_UP 2047
 #define P_DOWN 0
+
 #define TOL 2
-#define OSIZE 100
-#define GSIZE 30
+#define THRESH 400 // threshhold for the top hat sensor
+
+#define DIFF 150
+#define MID 800
+#define HIGH MID + DIFF
+#define LOW MID - DIFF
 
 inline int camera_move_x();
 inline int camera_move_y();
-inline void coord_update();
+inline void blob_update();
 inline int get_left();
 inline int get_middle();
 inline int get_right();
 int t_line_follow();
+
+void pom_push();
 
 struct blob_info {
 	int x; // x coordinate
@@ -26,18 +32,17 @@ struct blob_info {
 	int gsize; // size of green blob
 	int osize; // size of orange blob
 }current , target;
-// stores the coordinates currently read (for the green pom)
-// stores the coordinates needed (for the green pom)
+// stores the blob info currently read (for the green pom)
+// stores the blob infor needed (for the green pom)
+
 int arm_servo = 1; // servo of the pom getter arm
 int push_servo = 0; // servo of the pusher arm
 int basket_servo = 2;
-bool x_in = false; // checks if the x coordinate of the pom is corrent
-bool y_in = false; // checks if the y coordinate of the pom is correct
+
 int left_s = 5; // port for the left top hat sensor
 int right_s = 3; // port for the right top hat sensor
 int middle_s = 6; // port for the middle top hat sensor
-int osize; // size of the orange blob needed for detection (set below)
-int gsize; // size of the green blob needed for detection (set below)
+
 
 
 int main()
@@ -45,11 +50,11 @@ int main()
 	lego.left.port = 0;
 	lego.right.port = 2;
 	camera_open(LOW_RES);
-	coord_update();
+	blob_update();
 	printf("\nPress B to set Location\n");
 	while (b_button() == 0) // press the b button to set the coordinates
 	{
-		coord_update();
+		blob_update();
 		target.x = get_object_center(0 , 0).x; // sets target coordinates (x)
 		target.y = get_object_center(0 , 0).y; // sets target coordinates (y)
 		printf("(%d , %d)\n" , target.x , target.y);
@@ -58,10 +63,11 @@ int main()
 	while (c_button() == 0)
 	{
 		camera_update();
-		printf("Orange Size = %d\n" , get_object_center(1 , 0));
-		printf("Green Size = %d\n" , get_object_center(0 , 0));
+		target.gsize = get_object_area(0 , 0);
+		target.osize = get_object_area(1 , 0);
+		printf("Orange Size = %d" , get_object_area(1 , 0));
+		printf(" Green Size = %d\n" , get_object_area(0 , 0));
 	}
-	while (
 	//printf("IN RANGE , O = %d , G = %d\n" ,get_object_area(1 , 0) , get_object_area(0 , 0)); 
 	enable_servo(arm_servo);
 	enable_servo(push_servo);
@@ -71,15 +77,18 @@ int main()
 	set_servo_position(basket_servo , B_UP);
 	printf("(%d , %d)\n" , target.x , target.y);
 	while(a_button() == 0);
-		coord_update();
+		blob_update();
+	while (1)
+	{
+		blob_update();
+		t_line_follow();
+		if (current.osize > target.osize)
+			break;
+	}
 	while (1) // position to get the pom
 	{
-		coord_update();
+		blob_update();
 		printf("(%d , %d) , (%d , %d)\n" , target.x , target.y , current.x , current.y);
-		x_in = (current.x >= (target.x - TOL) && (current.x <= target.x + TOL));
-		// is true if the x coordinate is equal to the target or within a ten unit range (5 on each side)
-		y_in = (current.y >= (target.y - TOL) && (current.y <= target.y + TOL));
-		// is true if the y coordinate is equal to the target or within a ten unit range (5 on each side)
 		if ((current.y >= (target.y - TOL) && (current.y <= target.y + TOL)) && (current.x >= (target.x - TOL) && (current.x <= target.x + TOL)))
 		{
 			ao();
@@ -98,38 +107,20 @@ int main()
 		camera_move_x();	
 		msleep(10);
 	}
-	msleep(100);
-	set_servo_position(arm_servo , ARM_DUMP);
-	msleep(500);
-	set_servo_position(push_servo , P_UP);
-	msleep(500);
-	set_servo_position(push_servo , P_DOWN);
-	msleep(500);
-	set_servo_position(push_servo , P_UP);
-	msleep(500);
-	set_servo_position(push_servo , P_DOWN);
-	msleep(500);
-	set_servo_position(push_servo , P_UP);
-	msleep(500);
-	set_servo_position(push_servo , P_DOWN);
-	msleep(500);
-	ao();
-	coord_update();
-	while (get_object_area(0 , 0) > GSIZE)
+	pom_push();
+	while (1)
 	{
-		coord_update();
+		blob_update();
 		mav(lego.left.port , 300);
 		mav(lego.right.port , -300);
 		msleep(10);
+		if (current.gsize > 200)
+			break;
 	}
 	while (1) // position to get the pom
 	{
-		coord_update();
+		blob_update();
 		printf("(%d , %d) , (%d , %d)\n" , target.x , target.y , current.x , current.y);
-		x_in = (current.x >= (target.x - TOL) && (current.x <= target.x + TOL));
-		// is true if the x coordinate is equal to the target or within a ten unit range (5 on each side)
-		y_in = (current.y >= (target.y - TOL) && (current.y <= target.y + TOL));
-		// is true if the y coordinate is equal to the target or within a ten unit range (5 on each side)
 		if ((current.y >= (target.y - TOL) && (current.y <= target.y + TOL)) && (current.x >= (target.x - TOL) && (current.x <= target.x + TOL)))
 		{
 			ao();
@@ -148,21 +139,70 @@ int main()
 		camera_move_x();	
 		msleep(10);
 	}
-	msleep(100);
-	set_servo_position(arm_servo , ARM_DUMP);
-	msleep(500);
-	set_servo_position(push_servo , P_UP);
-	msleep(500);
-	set_servo_position(push_servo , P_DOWN);
-	msleep(500);
-	set_servo_position(push_servo , P_UP);
-	msleep(500);
-	set_servo_position(push_servo , P_DOWN);
-	msleep(500);
-	set_servo_position(push_servo , P_UP);
-	msleep(500);
-	set_servo_position(push_servo , P_DOWN);
-	msleep(500);
+	pom_push();
+
+	while (1)
+	{
+		blob_update();
+		t_line_follow();
+		if (current.osize > target.osize && current.gsize > 200)
+			break;
+	}
+	while (1) // position to get the pom
+	{
+		blob_update();
+		printf("(%d , %d) , (%d , %d)\n" , target.x , target.y , current.x , current.y);
+		if ((current.y >= (target.y - TOL) && (current.y <= target.y + TOL)) && (current.x >= (target.x - TOL) && (current.x <= target.x + TOL)))
+		{
+			ao();
+			printf("IN POS\n");
+			set_servo_position(arm_servo , ARM_DOWN);
+			msleep(500);
+			set_servo_position(arm_servo , 1000);
+			msleep(500);
+			set_servo_position(arm_servo , ARM_DOWN);
+			msleep(500);
+			set_servo_position(arm_servo , ARM_UP);
+			msleep(500);
+			break;
+		}
+		camera_move_y();
+		camera_move_x();	
+		msleep(10);
+	}
+	pom_push();
+	while (1)
+	{
+		blob_update();
+		mav(lego.left.port , 300);
+		mav(lego.right.port , -300);
+		msleep(10);
+		if (current.gsize > 200)
+			break;
+	}
+	while (1) // position to get the pom
+	{
+		blob_update();
+		printf("(%d , %d) , (%d , %d)\n" , target.x , target.y , current.x , current.y);
+		if ((current.y >= (target.y - TOL) && (current.y <= target.y + TOL)) && (current.x >= (target.x - TOL) && (current.x <= target.x + TOL)))
+		{
+			ao();
+			printf("IN POS\n");
+			set_servo_position(arm_servo , ARM_DOWN);
+			msleep(500);
+			set_servo_position(arm_servo , 1000);
+			msleep(500);
+			set_servo_position(arm_servo , ARM_DOWN);
+			msleep(500);
+			set_servo_position(arm_servo , ARM_UP);
+			msleep(500);
+			break;
+		}
+		camera_move_y();
+		camera_move_x();	
+		msleep(10);
+	}
+	pom_push();
 }
 
 
@@ -170,7 +210,7 @@ inline int camera_move_x()
 {
 	int lspeed = -150;
 	int hspeed = 150;
-	coord_update();
+	blob_update();
 	printf("MOVING X\n");
 	if (current.x < (target.x + TOL))
 	{
@@ -196,7 +236,7 @@ inline int camera_move_y()
 { 	
 	int speed = 150;
 	int back = -150;
-	coord_update();
+	blob_update();
 	if (current.y > (target.y - TOL))
 	{
 		printf("TOO CLOSE\n");
@@ -218,11 +258,13 @@ inline int camera_move_y()
 	}
 }
 
-inline void coord_update()
+inline void blob_update()
 {
 	camera_update();
 	current.x = get_object_center(0 , 0).x;
 	current.y = get_object_center(0 , 0).y;
+	current.gsize = get_object_area(0 , 0);
+	current.osize = get_object_area(1 , 0);
 }
 
 
@@ -295,3 +337,23 @@ int t_line_follow()
 	return 0;
 }
 
+void pom_push()
+{
+	msleep(100);
+	set_servo_position(arm_servo , ARM_DUMP);
+	msleep(500);
+	set_servo_position(push_servo , P_UP);
+	msleep(500);
+	set_servo_position(push_servo , P_DOWN);
+	msleep(500);
+	set_servo_position(push_servo , P_UP);
+	msleep(500);
+	set_servo_position(push_servo , P_DOWN);
+	msleep(500);
+	set_servo_position(push_servo , P_UP);
+	msleep(500);
+	set_servo_position(push_servo , P_DOWN);
+	msleep(500);
+	ao();
+	blob_update();
+}
