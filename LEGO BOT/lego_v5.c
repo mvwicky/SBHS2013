@@ -1,15 +1,15 @@
 #include "../CBClib.h"
 
 #define ARM_DUMP 200 // up for the pom getter arm
-#define ARM_UP 635
+#define ARM_UP 635 // arm is straight up
 #define ARM_DOWN 1850 // down for the pom getter arm
 #define ARM_OUT 1590 // out for the arm, push the things away
 #define B_UP 1600 // up for the basket
 #define B_DOWN 750 // down for the basket (dumping)
-#define P_UP 2047
-#define P_DOWN 0
+#define P_UP 2047 // push pom
+#define P_DOWN 0 // arm retracted
 
-#define TOL 2
+#define TOL 1
 #define THRESH 400 // threshhold for the top hat sensor
 
 #define DIFF 150
@@ -17,8 +17,8 @@
 #define HIGH MID + DIFF
 #define LOW MID - DIFF
 
-inline void turn_right();
-inline void turn_left();
+void turn_right();
+void turn_left();
 
 inline int camera_move_x();
 inline int camera_move_y();
@@ -33,21 +33,21 @@ int avoid_cube();
 int avoid_botguy();
 
 void pom_push();
+inline void get_pom();
 
-struct blob_info {
-	int x; // x coordinate
-	int y; // y coordinate
-	int gsize; // size of green blob
-	int osize; // size of orange blob
-	int rsize; // size of red blob
-	int bgsize; // size of botguy colored blob
+struct blob_info { 
+	struct color {
+		int x;
+		int y;
+		int size;
+	}green , orange , red , botguy;
 }current , target;
 // stores the blob info currently read (for the green pom)
-// stores the blob infor needed (for the green pom)
+// stores the blob info needed (for the green pom)
 
 int arm_servo = 1; // servo of the pom getter arm
 int push_servo = 0; // servo of the pusher arm
-int basket_servo = 2;
+int basket_servo = 2; // servo of the basket
 
 int left_s = 5; // port for the left top hat sensor
 int right_s = 3; // port for the right top hat sensor
@@ -57,8 +57,8 @@ int middle_s = 6; // port for the middle top hat sensor
 
 int main()
 {
-	extra_buttons_show(1);
-	set_a_button_text("SET COORDS");
+	extra_buttons_show(1); // show three extra buttons
+	set_a_button_text("SET COORDS"); // set the text of various buttons
 	set_c_button_text("SET POM SIZE");
 	set_x_button_text("SET BOTGUY SIZE");
 	set_y_button_text("SET CUBE SIZE"); 
@@ -70,29 +70,33 @@ int main()
 	while (b_button() == 0) // press the b button to set the coordinates
 	{
 		blob_update();
-		target.x = get_object_center(0 , 0).x; // sets target coordinates (x)
-		target.y = get_object_center(0 , 0).y; // sets target coordinates (y)
-		printf("(%d , %d)\n" , target.x , target.y);
+		target.green.x = current.green.x; // sets target coordinates (x)
+		target.green.y = current.green.x; // sets target coordinates (y)
+		printf("(%d , %d)\n" , target.green.x , target.green.y);
 		msleep(10);
 	}
 	while (c_button() == 0)
 	{
 		blob_update();
-		target.gsize = current.gsize;
-		target.osize = current.osize;
-		printf("Orange Size = %d" , current.osize);
-		printf(" Green Size = %d\n" , current.gsize;
+		target.green.size = current.green,size;
+		target.orange.size = current.orange.size;
+		printf("Orange Size = %d" , current.orange.size);
+		printf(" Green Size = %d\n" , current.green.size;
 	}
 	while (x_button() == 0)
 	{
 		blob_update();
-		target.bgsize = current.bgsize;
+		target.botguy.size = current.botguy.size;
+		target.botguy.x = current.botguy.x;
+		target.botguy.y = current.botguy.y
 		printf("Bot Guy Size = %d\n" , target.bgsize);
 	}
 	while (y_button() == 0)
 	{
 		blob_update();
-		target.rsize = current.rsize;
+		target.red.size = current.red.size;
+		target.red.x = current.red.x;
+		target.red.y = current.red.y;
 		printf("Red Cube Size = %d\n" , target.rsize);
 	}
 	//printf("IN RANGE , O = %d , G = %d\n" ,get_object_area(1 , 0) , get_object_area(0 , 0)); 
@@ -102,38 +106,18 @@ int main()
 	set_servo_position(arm_servo , ARM_UP);
 	set_servo_position(push_servo , P_DOWN);
 	set_servo_position(basket_servo , B_UP);
-	printf("(%d , %d)\n" , target.x , target.y);
+	printf("(%d , %d)\n" , target.green,.x , target.green.y);
 	while(a_button() == 0);
 		blob_update();
 	while (1)
 	{
 		blob_update();
 		t_line_follow();
-		if (current.osize > target.osize)
+		if (current.orange.size > target.orange.size)
 			break;
 	}
-	while (1) // position to get the pom
-	{
-		blob_update();
-		printf("(%d , %d) , (%d , %d)\n" , target.x , target.y , current.x , current.y);
-		if ((current.y >= (target.y - TOL) && (current.y <= target.y + TOL)) && (current.x >= (target.x - TOL) && (current.x <= target.x + TOL)))
-		{
-			ao();
-			printf("IN POS\n");
-			set_servo_position(arm_servo , ARM_DOWN);
-			msleep(500);
-			set_servo_position(arm_servo , 1000);
-			msleep(500);
-			set_servo_position(arm_servo , ARM_DOWN);
-			msleep(500);
-			set_servo_position(arm_servo , ARM_UP);
-			msleep(500);
-			break;
-		}
-		camera_move_y();
-		camera_move_x();	
-		msleep(10);
-	}
+	blob_update()
+	get_pom();
 	pom_push();
 	while (1)
 	{
@@ -144,63 +128,23 @@ int main()
 		if (current.gsize > 200)
 			break;
 	}
-	while (1) // position to get the pom
-	{
-		blob_update();
-		printf("(%d , %d) , (%d , %d)\n" , target.x , target.y , current.x , current.y);
-		if ((current.y >= (target.y - TOL) && (current.y <= target.y + TOL)) && (current.x >= (target.x - TOL) && (current.x <= target.x + TOL)))
-		{
-			ao();
-			printf("IN POS\n");
-			set_servo_position(arm_servo , ARM_DOWN);
-			msleep(500);
-			set_servo_position(arm_servo , 1000);
-			msleep(500);
-			set_servo_position(arm_servo , ARM_DOWN);
-			msleep(500);
-			set_servo_position(arm_servo , ARM_UP);
-			msleep(500);
-			break;
-		}
-		camera_move_y();
-		camera_move_x();	
-		msleep(10);
-	}
+	blob_update();
+	get_pom();
 	pom_push();
 	blob_update();
-	if (current.rsize > target.rsize)
+	if (current.red.size > target.red.size)
 		avoid_cube();
-	if (current.bgsize > target.bgsize)
+	if (current.botguy.size > target.botguy.size)
 		avoid_botguy();
 	while (1)
 	{
 		blob_update();
 		t_line_follow();
-		if (current.osize > target.osize && current.gsize > 200)
+		if (current.orange.size > target.orange.size && current.green.size > 200)
 			break;
 	}
-	while (1) // position to get the pom
-	{
-		blob_update();
-		printf("(%d , %d) , (%d , %d)\n" , target.x , target.y , current.x , current.y);
-		if ((current.y >= (target.y - TOL) && (current.y <= target.y + TOL)) && (current.x >= (target.x - TOL) && (current.x <= target.x + TOL)))
-		{
-			ao();
-			printf("IN POS\n");
-			set_servo_position(arm_servo , ARM_DOWN);
-			msleep(500);
-			set_servo_position(arm_servo , 1000);
-			msleep(500);
-			set_servo_position(arm_servo , ARM_DOWN);
-			msleep(500);
-			set_servo_position(arm_servo , ARM_UP);
-			msleep(500);
-			break;
-		}
-		camera_move_y();
-		camera_move_x();	
-		msleep(10);
-	}
+	blob_update();
+	pom_push();
 	pom_push();
 	while (1)
 	{
@@ -211,29 +155,26 @@ int main()
 		if (current.gsize > 200)
 			break;
 	}
-	while (1) // position to get the pom
-	{
-		blob_update();
-		printf("(%d , %d) , (%d , %d)\n" , target.x , target.y , current.x , current.y);
-		if ((current.y >= (target.y - TOL) && (current.y <= target.y + TOL)) && (current.x >= (target.x - TOL) && (current.x <= target.x + TOL)))
-		{
-			ao();
-			printf("IN POS\n");
-			set_servo_position(arm_servo , ARM_DOWN);
-			msleep(500);
-			set_servo_position(arm_servo , 1000);
-			msleep(500);
-			set_servo_position(arm_servo , ARM_DOWN);
-			msleep(500);
-			set_servo_position(arm_servo , ARM_UP);
-			msleep(500);
-			break;
-		}
-		camera_move_y();
-		camera_move_x();	
-		msleep(10);
-	}
+	blob_update();
+	get_pom();
 	pom_push();
+	blob_update();
+	if (current.red.size > target.red.size)
+		avoid_cube();
+	if (current.botguy.size > target.botguy.size)
+		avoid_botguy();
+	int start_time = seconds();
+	int t;
+	while (1)
+	{
+		t_line_follow();
+		if (seconds() < start_time + t)
+			break;
+	}
+	while (1)
+	{
+
+	}
 }
 
 inline int camera_move_x()
@@ -291,12 +232,22 @@ inline int camera_move_y()
 inline void blob_update()
 {
 	camera_update();
-	current.x = get_object_center(0 , 0).x;
-	current.y = get_object_center(0 , 0).y;
-	current.gsize = get_object_area(0 , 0);
-	current.osize = get_object_area(1 , 0);
-	current.rsize = get_object_area(2 , 0);
-	current.bgsize = get_object_area(3 , 0);
+	//update green state
+	current.green.x = get_object_center(0 , 0).x;
+	current.green.y = get_object_center(0 , 0).y;
+	current.green.size = get_object_area(0 , 0);
+	//update orange state
+	current.orange.x = get_object_center(1 , 0).x;
+	current.orange.y = get_object_center(1 , 0).y;
+	current.orange.size = get_object_area(1 , 0);
+	//update red state
+	current.red.x = get_object_center(2 , 0).x;
+	current.red.y = get_object_center(2 , 0).y;
+	current.red.size = get_object_area(2 , 0);
+	// update botguy state
+	current.botguy.x = get_object_center(3 , 0).x;
+	current.botguy.y = get_object_center(3 , 0).y;
+	current.botguy.size = get_object_area(3 , 0);
 }
 
 
@@ -462,4 +413,30 @@ void pom_push()
 	msleep(500);
 	ao();
 	blob_update();
+}
+
+inline void get_pom()
+{
+	while (1) // position to get the pom
+	{
+		blob_update();
+		printf("(%d , %d) , (%d , %d)\n" , target.green.x , target.green.y , current.green.x , current.green.y);
+		if ((current.green.y >= (target.green.y - TOL) && (current.green.y <= target.green.y + TOL)) && (current.green.x >= (target.green.x - TOL) && (current.green.x <= target.green.x + TOL)))
+		{
+			ao();
+			printf("IN POS\n");
+			set_servo_position(arm_servo , ARM_DOWN);
+			msleep(500);
+			set_servo_position(arm_servo , ARM_OUT);
+			msleep(500);
+			set_servo_position(arm_servo , ARM_DOWN);
+			msleep(500);
+			set_servo_position(arm_servo , ARM_UP);
+			msleep(500);
+			break;
+		}
+		camera_move_y();
+		camera_move_x();	
+		msleep(10);
+	}
 }
