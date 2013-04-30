@@ -3,6 +3,7 @@
 #define ARM_DUMP 200 // up for the pom getter arm
 #define ARM_UP 635
 #define ARM_DOWN 1850 // down for the pom getter arm
+#define ARM_OUT 1590 // out for the arm, push the things away
 #define B_UP 1600 // up for the basket
 #define B_DOWN 750 // down for the basket (dumping)
 #define P_UP 2047
@@ -16,13 +17,20 @@
 #define HIGH MID + DIFF
 #define LOW MID - DIFF
 
+inline void turn_right();
+inline void turn_left();
+
 inline int camera_move_x();
 inline int camera_move_y();
 inline void blob_update();
+
 inline int get_left();
 inline int get_middle();
 inline int get_right();
+
 int t_line_follow();
+int avoid_cube();
+int avoid_botguy();
 
 void pom_push();
 
@@ -31,6 +39,8 @@ struct blob_info {
 	int y; // y coordinate
 	int gsize; // size of green blob
 	int osize; // size of orange blob
+	int rsize; // size of red blob
+	int bgsize; // size of botguy colored blob
 }current , target;
 // stores the blob info currently read (for the green pom)
 // stores the blob infor needed (for the green pom)
@@ -47,6 +57,11 @@ int middle_s = 6; // port for the middle top hat sensor
 
 int main()
 {
+	extra_buttons_show(1);
+	set_a_button_text("SET COORDS");
+	set_c_button_text("SET POM SIZE");
+	set_x_button_text("SET BOTGUY SIZE");
+	set_y_button_text("SET CUBE SIZE"); 
 	lego.left.port = 0;
 	lego.right.port = 2;
 	camera_open(LOW_RES);
@@ -62,11 +77,23 @@ int main()
 	}
 	while (c_button() == 0)
 	{
-		camera_update();
-		target.gsize = get_object_area(0 , 0);
-		target.osize = get_object_area(1 , 0);
-		printf("Orange Size = %d" , get_object_area(1 , 0));
-		printf(" Green Size = %d\n" , get_object_area(0 , 0));
+		blob_update();
+		target.gsize = current.gsize;
+		target.osize = current.osize;
+		printf("Orange Size = %d" , current.osize);
+		printf(" Green Size = %d\n" , current.gsize;
+	}
+	while (x_button() == 0)
+	{
+		blob_update();
+		target.bgsize = current.bgsize;
+		printf("Bot Guy Size = %d\n" , target.bgsize);
+	}
+	while (y_button() == 0)
+	{
+		blob_update();
+		target.rsize = current.rsize;
+		printf("Red Cube Size = %d\n" , target.rsize);
 	}
 	//printf("IN RANGE , O = %d , G = %d\n" ,get_object_area(1 , 0) , get_object_area(0 , 0)); 
 	enable_servo(arm_servo);
@@ -140,7 +167,11 @@ int main()
 		msleep(10);
 	}
 	pom_push();
-
+	blob_update();
+	if (current.rsize > target.rsize)
+		avoid_cube();
+	if (current.bgsize > target.bgsize)
+		avoid_botguy();
 	while (1)
 	{
 		blob_update();
@@ -205,7 +236,6 @@ int main()
 	pom_push();
 }
 
-
 inline int camera_move_x()
 {
 	int lspeed = -150;
@@ -265,6 +295,8 @@ inline void blob_update()
 	current.y = get_object_center(0 , 0).y;
 	current.gsize = get_object_area(0 , 0);
 	current.osize = get_object_area(1 , 0);
+	current.rsize = get_object_area(2 , 0);
+	current.bgsize = get_object_area(3 , 0);
 }
 
 
@@ -335,6 +367,80 @@ int t_line_follow()
 		return 0;
 	}
 	return 0;
+}
+
+int avoid_cube()
+{
+	blob_update();
+	while (1)
+	{
+		mav(lego.left.port , -300);
+		mav(lego.right.port , -300);
+		msleep(10);
+		if (get_middle() < THRESH)
+			break;
+	}
+	while (1)
+	{
+		blob_update();
+		t_line_follow()
+		if (current.rsize > target.rsize)
+			break;
+	}
+	while (1)
+	{
+		mav(lego.left.port , 300);
+		mav(lego.right.port , -300);
+		if (get_middle() > THRESH && get_left() > THRESH)
+			break;
+	}
+	set_servo_position(arm_servo , ARM_OUT);
+	msleep(500);
+	while (1)
+	{
+		mav(lego.left.port , -300);
+		mav(lego.right.port , 300);
+		if (get_middle() < THRESH)
+			break;
+	}
+	return 0;	
+}
+
+int avoid_botguy()
+{
+	blob_update();
+	while (1)
+	{
+		mav(lego.left.port , -300);
+		mav(lego.right.port , -300);
+		msleep(10);
+		if (get_middle() < THRESH)
+			break;
+	}
+	while (1)
+	{
+		blob_update();
+		t_line_follow()
+		if (current.bgsize > target.bgsize)
+			break;
+	}
+	while (1)
+	{
+		mav(lego.left.port , 300);
+		mav(lego.right.port , -300);
+		if (get_middle() > THRESH && get_left() > THRESH)
+			break;
+	}
+	set_servo_position(arm_servo , ARM_OUT);
+	msleep(500);
+	while (1)
+	{
+		mav(lego.left.port , -300);
+		mav(lego.right.port , 300);
+		if (get_middle() < THRESH)
+			break;
+	}
+	return 0;	
 }
 
 void pom_push()
