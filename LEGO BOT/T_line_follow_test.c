@@ -14,9 +14,9 @@ inline int get_left();
 inline int get_middle();
 inline int get_right();
 
-int left_s = 5; // port for the left top hat sensor
-int right_s = 3; // port for the right top hat sensor
-int middle_s = 6; // port for the middle top hat sensor
+int left_s = 1; // port for the left top hat sensor
+int right_s = 4; // port for the right top hat sensor
+int middle_s = 8; // port for the middle top hat sensor
 
 int main()
 {
