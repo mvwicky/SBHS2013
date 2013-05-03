@@ -1,8 +1,5 @@
 #include "../CBClib.h"
 
-// config file for poms, blocks, and botguy = default.config
-// config file for boosters = boosters.config
-
 #define ARM_DUMP 200 // up for the pom getter arm
 #define ARM_UP 635 // arm is straight up
 #define ARM_DOWN 1850 // down for the pom getter arm
@@ -12,34 +9,32 @@
 #define P_UP 2047 // push pom
 #define P_DOWN 0 // arm retracted
 
-#define TOL 3
+#define TOL 1
 #define THRESH 14 // threshhold for the top hat sensor
 
-#define DIFF 100
-#define MID 800
+#define DIFF 50
+#define MID 900
 #define HIGH MID + DIFF
 #define LOW MID - DIFF
 
-void turn_right();
-void turn_left();
+void turn_right(int speed); // function to turn the robot right at speed
+void turn_left(int speed); // function to turn the robot left at speed 
 
-inline int camera_move_x();
-inline int camera_move_y();
-inline void blob_update();
+inline int camera_move_x(); // move the camera in the x direction (kind of an arc)
+inline int camera_move_y(); // move the camera in the y direction
+inline void blob_update(); // update the camera and update all the current.channel.x,y,size
 
-inline int get_left();
-inline int get_middle();
-inline int get_right();
-inline int get_ET();
+inline int get_left(); // get the value from the left top hat sensor
+inline int get_middle(); // get the value from the middle top hat sensor
+inline int get_right(); // get the value from the right top hat sensor
+inline int get_ET(); // get the value from the ET sensor
 
-int t_line_follow();
-int avoid_cube();
-int avoid_botguy();
-int avoid_booster();
-int avoid_pink_booster();
+int t_line_follow(); // fololow the line
+int avoid_cubeguy(); // avoid the red cube
+int avoid_booster(); // avoid the skycrane
 
-void pom_push();
-inline void get_pom();
+void pom_push(); // push the pom into the basket
+inline void get_pom(); // pick up the pom using the arm
 
 struct blob_info { 
 	struct color {
@@ -64,14 +59,14 @@ int ET_s = 0; // port for the ET sensor
 int main()
 {
 	msleep(2500);
-	set_analog_pullup(ET_s , 0);
+	set_analog_pullup(ET_s , 0); 
 	extra_buttons_show(1); // show three extra buttons
 	set_a_button_text("COORDS"); // set the text of various buttons
 	set_b_button_text("POM SIZE");
 	set_c_button_text("BOTGUY SIZE");
 	set_x_button_text("CUBE SIZE"); 
 
-	lego.left.port = 0;
+	lego.left.port = 0; // set motor ports
 	lego.right.port = 2;
 	
 	camera_open(LOW_RES);
@@ -92,28 +87,7 @@ int main()
 		printf("Orange Size = %d" , target.orange.size);
 		printf(" Green Size = %d\n" , target.green.size);
 	}
-	while (c_button() == 0)
-	{
-		camera_update();
-		target.botguy.size = get_object_area(3 , 0);
-		target.botguy.x = get_object_center(3 , 0).x;
-		target.botguy.y = get_object_center(3 , 0).y;
-		printf("Bot Guy Size = %d\n" , target.botguy.size);
-	}
-	while (x_button() == 0)
-	{
-		camera_update();
-		target.red.size = get_object_area(2 , 0);
-		target.red.x = get_object_center(2 , 0).x;
-		target.red.y = get_object_center(2 , 0).y;
-		printf("Red Cube Size = %d\n" , target.red.size);
-	}
-	while (side_button() == 0)
-	{
-		printf("ET = %d\n" , get_ET());
-		msleep(1);
-	}
-	enable_servo(arm_servo);
+	enable_servo(arm_servo); 
 	enable_servo(push_servo);
 	enable_servo(basket_servo);
 	set_servo_position(arm_servo , ARM_UP);
@@ -122,9 +96,32 @@ int main()
 	printf("(%d , %d)\n" , target.green.x , target.green.y);
 	while(a_button() == 0)
 	{
-		//blob_update();
 		printf("%d , %d , %d\n" , get_left() , get_middle() , get_right());
 	}
+	while (1) // line follow until poms are seen
+	{
+		blob_update();
+		t_line_follow();
+		if (current.orange.size > target.orange.size && current.green.size > target.green.size)
+			break;
+	}
+	blob_update(); 
+	get_pom(); // pick up a pom
+	pom_push(); // push it into the basket
+	while (1) // turn to next pom
+	{
+		blob_update();
+		mav(lego.left.port , 300); 
+		mav(lego.right.port , -300);
+		msleep(10);
+		if (current.green.size > target.green.size)
+			break;
+	}
+	blob_update();
+	get_pom(); // pick up pom
+	pom_push(); // push it into the basket
+	avoid_cubeguy(); // avoid the cube or botguy
+	avoid_booster();
 	while (1)
 	{
 		blob_update();
@@ -133,7 +130,6 @@ int main()
 			break;
 	}
 	blob_update();
-	get_pom();
 	pom_push();
 	while (1)
 	{
@@ -147,37 +143,7 @@ int main()
 	blob_update();
 	get_pom();
 	pom_push();
-	blob_update();
-	if (current.red.size > target.red.size)
-		avoid_cube();
-	if (current.botguy.size > target.botguy.size)
-		avoid_botguy();
-	while (1)
-	{
-		blob_update();
-		t_line_follow();
-		if (current.orange.size > target.orange.size && current.green.size > target.green.size)
-			break;
-	}
-	blob_update();
-	pom_push();
-	while (1)
-	{
-		blob_update();
-		mav(lego.left.port , 300);
-		mav(lego.right.port , -300);
-		msleep(10);
-		if (current.green.size > target.green.size)
-			break;
-	}
-	blob_update();
-	get_pom();
-	pom_push();
-	blob_update();
-	if (current.red.size > target.red.size)
-		avoid_cube();
-	if (current.botguy.size > target.botguy.size)
-		avoid_botguy();
+	avoid_cubeguy();
 	int start_time = seconds();
 	int t;
 	while (1)
@@ -207,8 +173,8 @@ void turn_left(int speed)
 inline int camera_move_x()
 {
 	  
-	int lspeed = -150;
-	int hspeed = 150;
+	int lspeed = -100;
+	int hspeed = 100;
 	blob_update();
 	printf("MOVING X\n");
 	if (current.green.x < (target.green.x + TOL))
@@ -235,8 +201,8 @@ inline int camera_move_x()
 inline int camera_move_y()
 { 	
 	  
-	int speed = 150;
-	int back = -150;
+	int speed = 200;
+	int back = -200;
 	blob_update();
 	if (current.green.y > (target.green.y - TOL))
 	{
@@ -370,30 +336,31 @@ int t_line_follow()
 	return 0;
 }
 
-int avoid_cube()
+int avoid_cubeguy()
 {
-	  
-	blob_update();
+	
 	while (1)
 	{
 		mav(lego.left.port , -300);
 		mav(lego.right.port , -300);
 		msleep(10);
-		if (get_middle() < THRESH)
+		if (get_left() < THRESH)
 			break;
 	}
 	while (1)
 	{
-		blob_update();
 		t_line_follow();
-		if (current.red.size > target.red.size)
+		if (digital(15) == 1)
 			break;
 	}
+	mav(lego.left.port , -300);
+	mav(lego.right.port , -300);
+	msleep(2500);
 	while (1)
 	{
 		mav(lego.left.port , 300);
 		mav(lego.right.port , -300);
-		if (get_middle() > THRESH && get_left() > THRESH)
+		if (get_middle() > THRESH && get_left() > THRESH && get_right() > THRESH)
 			break;
 	}
 	set_servo_position(arm_servo , ARM_OUT);
@@ -405,75 +372,12 @@ int avoid_cube()
 		if (get_middle() < THRESH)
 			break;
 	}
-	return 0;	
-}
-
-int avoid_botguy()
-{
-	  
-	blob_update();
-	while (1)
-	{
-		mav(lego.left.port , -300);
-		mav(lego.right.port , -300);
-		msleep(10);
-		if (get_middle() < THRESH)
-			break;
-	}
-	while (1)
-	{
-		blob_update();
-		t_line_follow();
-		if (current.botguy.size > target.botguy.size)
-			break;
-	}
-	while (1)
-	{
-		mav(lego.left.port , 300);
-		mav(lego.right.port , -300);
-		if (get_middle() > THRESH && get_left() > THRESH)
-			break;
-	}
-	set_servo_position(arm_servo , ARM_OUT);
-	msleep(500);
-	while (1)
-	{
-		mav(lego.left.port , -300);
-		mav(lego.right.port , 300);
-		if (get_middle() < THRESH)
-			break;
-	}
-	set_servo_position(arm_servo , ARM_UP);
-	msleep(500);
 	return 0;	
 }
 
 int avoid_booster()
 {
 	register unsigned int current_ET; // declare ET value
-	while (1)
-	{
-		mav(lego.left.port , -300); 
-		mav(lego.right.port , -300); // drive back to the line
-		msleep(10);
-		if (get_middle() < THRESH)
-			break;
-	}
-	while (1)
-	{
-		t_line_follow(); // follow the line until the teal blob is seen
-		if (digital(15) == 1)
-			break;
-	}
-	mav(lego.left.port , -300);
-	mav(lego.left.port , -300);
-	msleep(1000);
-	while (1)
-	{
-		turn_right(300); // turn until off the line
-		if (get_left() > THRESH && get_middle() > THRESH)
-			break;
-	}
 	while (1)
 	{
 		current_ET = get_ET();
