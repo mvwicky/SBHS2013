@@ -68,7 +68,6 @@ int main()
 	}
 	*/
 	while(get_object_area(teal, big) < S_BLOB) // big is biggest blob; S_BLOB is smallest blob area
-		
 	{
 		camera_update();
 		create_drive_direct(200, 200);

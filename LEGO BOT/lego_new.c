@@ -2,12 +2,10 @@
 // SET THE ET DISTANCE TO A CORRECT VALUE
 // FIND THE CORRECT SIZE FOR STOL
 
-
-
-
 #define ARM_DUMP 200 // up for the pom getter arm
 #define ARM_UP 635 // arm is straight up
 #define ARM_DOWN 1850 // down for the pom getter arm
+#define ARM_OUT 1590 // out for the arm, push the things away
 
 #define B_UP 1600 // up for the basket
 #define B_DOWN 750 // down for the basket (dumping)
@@ -86,28 +84,28 @@ int main()
 	set_analog_pullup(left_s , 1);
 	set_analog_pullup(middle_s , 1);
 	set_analog_pullup(right_s , 1);
-	while (a_button() == 0)
+	while (a_button() == 0) // set target green coordinates 
 	{
 		camera_update();
 		target.green.x = get_object_center(0 , 0).x;
 		target.green.y = get_object_center(0 , 0).y;
 		
 	}
-	while (b_button() == 0)
+	while (b_button() == 0) // set target green size
 	{
 		camera_update();
 		target.green.size = get_object_area(0 , 0);
 	}
-	while (c_button() == 0)
+	while (c_button() == 0) // set target orange size
 	{
 		camera_update();
 		target.orange.size = get_object_area(0 , 0);
 	}
-	while (side_button() == 0)
+	while (side_button() == 0) // wait
 	{
 		update_blob();
 	}
-	while (1)
+	while (1) // follow the line until a blob of orange and green is seen
 	{
 		update_blob();
 		t_line_follow();
@@ -138,8 +136,9 @@ int main()
 	get_pom(); // get fourth pom
 	pom_push();
 	avoid_booster();
-	while (1)
+	while (1) // follow the line until a blob of orange and green is seen
 	{
+		update_blob();
 		t_line_follow();
 		if (current.green.size >= target.green.size && current.orange.size >= target.green.size)
 			break;
@@ -446,7 +445,7 @@ int avoid_cubeguy()
 			printf("TOO FAR\n");
 			mav(lego.left.port , hspeed);
 			mav(lego.right.port , lspeed);
-			mspeed(10);
+			msleep(10);
 		}
 		if (get_ET() == ET_DIST) // correct distance
 		{
@@ -462,7 +461,7 @@ int avoid_cubeguy()
 	return 0;
 }
 
-int avoid_booster()
+int avoid_booster() //  not finsihed
 {
 	while (1)
 	{
@@ -477,5 +476,5 @@ int avoid_booster()
 	mav(lego.right.port , -300);
 	msleep(3000);
 	ao();
-
+	return 0;
 }
