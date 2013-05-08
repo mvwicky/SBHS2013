@@ -25,6 +25,8 @@
 #define HIGH MID + DIFF
 #define LOW MID - DIFF
 
+#define TICKS(d) ((1000 * d) / 185)
+
 int left_s = 1; // port for the left top hat sensor
 int right_s = 7; // port for the right top hat sensor
 int middle_s = 4; // port for the middle top hat sensor
@@ -119,31 +121,40 @@ int main()
 	enable_servo(push_servo);
 	enable_servo(basket_servo);
 	nv_servo(arm_servo , ARM_SCAN);
-	set_servo_position(push_servo , P_DOWN);
-	set_servo_position(basket_servo , B_UP);
-	while (x_button() == 0)
-	{
-		printf("ET = %d , TH = %d\n" , get_ET() , get_TH());
-	}
-	while (a_button() == 0) // wait
-	{
-		update_blob();
-	}
+	set_servo_position(push_servo , P_UP);
+	set_servo_position(basket_servo , 2047);
+	wait_for_light(2);
+	shut_down_in(118);
+	update_blob();
 	int t = seconds();
 	int cyc = 0;
+	set_servo_position(basket_servo , B_UP);
+	msleep(500);
+	while (get_left() > THRESH && get_middle() > THRESH && get_right() > THRESH)
+	{
+		mav(lego.left.port , -300);
+		mav(lego.right.port , -300);
+		msleep(10);
+	}
+	while (1)
+	{
+		turn_left(300);
+		if (get_left() > THRESH)
+			break;
+	}
 	while (1) // follow the line until a blob of orange and green is seen
 	{
 		update_blob();
 		t_line_follow();
 		cyc += 1;
-		if (cyc % 15 == 0)
+		if (cyc % 50 == 0)
 		{
 			ao();
 			turn_left(300);
 			msleep(150);
 			
 		}
-		if (current.orange.size >= 75)
+		if (current.orange.size >= 75 && current.green.size > target.green.size)
 			break;
 	}
 	turn_left(300);
@@ -231,13 +242,33 @@ int main()
 	{	
 		cyc += 1;
 		t_line_follow();
-		if (cyc == 500)
+		if (get_left() < THRESH && get_middle() < THRESH && get_right() < THRESH)
+		{
+			while (1)
+			{
+				turn_left(300);
+				if (get_right() > THRESH)
+					break;
+			}
+		}
+		if (cyc == 1300)
 		{
 			freeze(lego.left.port);
 			freeze(lego.right.port);
 			break;
 		}
 	}
+	mav(lego.left.port , 200);
+	mav(lego.right.port , 500);
+	msleep(1300);
+	turn_right(300);
+	msleep(1500);
+	set_servo_position(basket_servo , B_DOWN);
+	msleep(500);
+	set_servo_position(basket_servo , B_UP);
+	msleep(500);
+	set_servo_position(basket_servo , B_DOWN);
+	msleep(500);
 	/*
 	if (seconds() - t > 55)
 	{
