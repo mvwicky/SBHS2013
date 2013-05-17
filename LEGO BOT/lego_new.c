@@ -450,14 +450,14 @@ int line_follow_slow()
 {
 	int low = (int)(LOW / 2);
 	int high = (int)(HIGH / 2);
-	if (get_left() < THRESH && get_middle() < THRESH && get_right() < THRESH) // 0 , 0 , 0 // spin in place
+	if (left_on() == false && middle_on() == false && right_on() == false // 0 , 0 , 0 // spin in place
 	{
 		mav(lego.left.port , low);
 		mav(lego.right.port , -low);
 		msleep(10);
 		return 0;
 	}
-	if (get_left() > THRESH && get_middle() < THRESH && get_right() < THRESH) // 1 , 0 , 0 // 
+	if (left_on() == true && middle_on() == false && right_on() == false) // 1 , 0 , 0 // 
 	{
 		mav(lego.left.port , low);
 		mav(lego.right.port , high);
