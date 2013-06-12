@@ -30,10 +30,20 @@ int xl_count = 0; // amount of times that the bot has moved left (camera move)
 int xr_count = 0; // amount of times that the bot has moved right (camera move)
 int y_count = 0; // amount of times that the bot has moved forward (camera move)
 
-struct link { // basically this struct contains the motor ports
+struct link { // this struct contains vital information for the link
+	int thresh;
 	struct motor {
 		int port;
+		int pos;
 	}left , right , x_pos;
+	struct servo {
+		int port;
+		int pos;
+	}arm , push , basket;
+	struct sensor {
+		int port;
+		int val;
+	}left_s , middle_s , right_s , ET;
 }lego;
 
 struct blob { // this struct contains the x , y , and size values for each color for the current and target frame
@@ -45,6 +55,7 @@ struct blob { // this struct contains the x , y , and size values for each color
 }current , target;
 
 int update_blob(); // updates the screen
+int update_link(); // updates some values related to the link
 
 void turn_right(int speed); // turn right at speed , - speed
 void turn_left(int speed); // turn left at -speed , speed
@@ -55,7 +66,6 @@ int af();
 
 int camera_move_x(); // align the camera in the x direction
 int camera_move_y(); // align the camera in the y direction
-
 int left_on(); // return true if on line and false if not (for all these)
 int right_on(); 
 int middle_on();
@@ -65,7 +75,6 @@ int get_ET();
 int line_follow(); // follow the black line
 int line_follow_slow(); // follow the black line quickly
 
-int turn_to_pom();
 int get_pom(); // get the pom (align), then pickup
 int pom_push(); // push the pom into the basket 
 int move_back(); // move back to the line after aligning
@@ -78,7 +87,6 @@ int oc = 1; // orange channel
 int pc = 2; // pink channel
 int tc = 3; // teal channel
 
-
 int arm_servo = 1; // servo for the picker upper arm
 int push_servo = 0; // servo for the pusher arm
 int basket_servo = 2; // servo for the basket
@@ -89,11 +97,36 @@ int ET_s = 3; // port for the ET sensor
 
 int main()
 {
-	
+	camera_open(LOW_RES);
+	camera_update();
+	lego.thresh = 450;
+	lego.left.port = 0;
+	lego.right.port = 2;
+	lego.x_pos.port = 1;
+	lego.arm.port = 1;
+	lego.push.port = 0;
+	lego.basket.port = 2;
+	lego.left_s.port = 2;
+	lego.right_s.port = 0;
+	lego.middle_s.port = 1;
+	lego.ET.port = 3;
+	set_analog_pullup(lego.ET.port , 0);
+	set_analog_pullup(lego.left_s.port , 1);
+	set_analog_pullup(lego.middle_s.port , 1);
+	set_analog_pullup(lego.right_s.port , 1);
+	enable_servo(lego.arm.port);
+	enable_servo(lego.push.port);
+	enable_servo(lego.basket.port);
+	nv_servo(lego.arm.port , ARM_SCAN);
+	nv_servo(lego.basket.port , B_UP);
+	nv_servo(lego.push.port , P_DOWN);
+
+
 }
 
 int update_blob()
 {
+	camera_update();
 	current.green.x = get_object_center(gc , 0).x;
 	current.green.y = get_object_center(gc , 0).y;
 	current.green.size = get_object_area(gc , 0);
@@ -106,6 +139,21 @@ int update_blob()
 	current.teal.x = get_object_center(tc , 0).x;
 	current.teal.y = get_object_center(tc , 0).y;
 	current.teal.size = get_object_area(tc , 0);
+	return 0;
+}
+
+int update_link()
+{
+	lego.left.pos = get_motor_position_counter(lego.left.port);
+	lego.right.pos = get_motor_position_counter(lego.right.port);
+	lego.x_pos.pos = get_motor_position_counter(lego.x_pos.port);
+	lego.arm.pos = get_servo_position(lego.arm.port);
+	lego.push.pos = get_servo_position(lego.push.port);
+	lego.basket.pos = get_servo_position(lego.basket.port);
+	lego.left_s.val = analog10(lego.left_s.port);
+	lego.middle_s.val = analog10(lego.middle_s.port);
+	lego.right_s.val = analog10(lego.right_s.port);
+	lego.ET.val = analog10(lego.ET.port);
 	return 0;
 }
 
@@ -133,7 +181,7 @@ void drive_back(int speed)
 	mav(lego.right.port , -speed);
 }
 
-int nv_servo(int s , int fpos)
+int nv_servo(int s , int fpos , int step = 8)
 {
 	int cpos = get_servo_position(s);
 	if (cpos > fpos)
@@ -223,31 +271,29 @@ int camera_move_y()
 
 int left_on()
 {
-	if (analog10(left_s) > THRESH)
+	update_link();
+	if (lego.left_s.val > THRESH)
 		return true;
-	if (analog10(left_s) <= THRESH)
+	if (lego.left_s.val <= THRESH)
 		return false;
 }
 
 int middle_on()
 {
-	if (analog10(middle_s) > THRESH)
+	update_link();
+	if (lego.middle_s.val > THRESH)
 		return true;
-	if (analog10(middle_s) <= THRESH)
+	if (lego.middle_s.val <= THRESH)
 		return false;
 }
 
 int right_on()
 {
-	if (analog10(right_s) > THRESH)
+	update_link();
+	if (lego.right_s.val > THRESH)
 		return true;
-	if (analog10(right_s) <= THRESH)
+	if (lego.right_s.val <= THRESH)
 		return false;
-}
-
-int get_ET()
-{
-	return analog10(ET_S);
 }
 
 int line_follow()
@@ -374,10 +420,10 @@ int get_pom()
 		{
 			af();
 			printf("IN POS\n");
-			nv_servo(arm_servo , ARM_DOWN);
-			nv_servo(arm_servo , ARM_OUT);
-			nv_servo(arm_servo , ARM_DOWN);
-			nv_servo(arm_servo , ARM_DUMP);
+			nv_servo(lego.arm.port , ARM_DOWN);
+			nv_servo(lego.arm.port , ARM_OUT);
+			nv_servo(lego.arm.port , ARM_DOWN);
+			nv_servo(lego.arm.port , ARM_DUMP);
 			msleep(500);
 			break;
 		}
