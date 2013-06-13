@@ -17,8 +17,7 @@ NOTES
 #define P_UP // arm is pushing pom in
 #define P_DOWN // arm is retracted
 
-#define TOL
-#define THRESH 450
+#define TOL 
 
 #define DIFF 100
 #define MID 1000 
@@ -57,6 +56,8 @@ struct blob { // this struct contains the x , y , and size values for each color
 		int size;
 	}green , orange , pink , teal;
 }current , target;
+
+int nsleep(int t);
 
 int update_blob(); // updates the screen
 int update_link(); // updates some values related to the link
@@ -209,7 +210,15 @@ int main()
 			pom_push();
 		}
 	}
-	move_back();
+	move_back(); // move back to the line
+
+}
+
+int nsleep(int t) // sleep for a matter of nanoseconds
+{
+	msleep((int)(t / 1000000);
+	return 0;
+
 }
 
 int update_blob()
@@ -394,27 +403,27 @@ int camera_move_y()
 int left_on()
 {
 	update_link();
-	if (lego.th_left.val > THRESH)
+	if (lego.th_left.val > lego.thresh)
 		return true;
-	if (lego.th_left.val <= THRESH)
+	if (lego.th_left.val <= lego.thresh)
 		return false;
 }
 
 int middle_on()
 {
 	update_link();
-	if (lego.th_middle.val > THRESH)
+	if (lego.th_middle.val > lego.thresh)
 		return true;
-	if (lego.th_middle.val <= THRESH)
+	if (lego.th_middle.val <= lego.thresh)
 		return false;
 }
 
 int right_on()
 {
 	update_link();
-	if (lego.th_right.val > THRESH)
+	if (lego.th_right.val > lego.thresh)
 		return true;
-	if (lego.th_right.val <= THRESH)
+	if (lego.th_right.val <= lego.thresh)
 		return false;
 }
 
@@ -591,6 +600,44 @@ int move_back()
 	bmd(lego.left.port);
 	bmd(lego.right.port);
 	return 0;
+}
+
+int avoid_cubeguy()
+{
+	update_link();
+	nv_servo(lego.arm.port , ARM_UP);
+	while (1)
+	{
+		update_link();
+		turn_left(500);
+		msleep(10);
+		if (middle_on() == true)
+		{
+			af();
+			break;
+		}
+	}
+	while (1)
+	{
+		update_link();
+		line_follow_slow();
+		if (lego.ET.val < 600)
+		{
+			af();
+			break;
+		}
+	}
+	turn_right(300);
+	msleep(1250);
+	af();
+	nv_servo(lego.arm.port , ARM_OUT);
+	while (1)
+	{
+		turn_left(300);
+		msleep(10);
+		if ()
+	}
+
 }
 
 int average(int port , int samples)
