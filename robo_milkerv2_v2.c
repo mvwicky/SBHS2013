@@ -94,6 +94,9 @@ int move_back(); // move back to the line after aligning
 int avoid_cubeguy(); // avoid the cube or botguy
 int avoid_booster(); // avoid the booster
 
+int average(int port , int samples);
+int delay(int t);
+
 int gc = 0; // green channel
 int oc = 1; // orange channel
 int pc = 2; // pink channel
@@ -587,6 +590,31 @@ int move_back()
 	mrp(lego.right.port , -200 , y_back);
 	bmd(lego.left.port);
 	bmd(lego.right.port);
+	return 0;
+}
+
+int average(int port , int samples)
+// function that returns the average of an amount of sensor readings
+// args = port of sensor to be read , amount of samples
+{ 
+	int nums[samples]; // create array for the readings
+	int sum = 0; // create variable for the sum
+	float average; // create variable for the average
+	int n;
+	for (n = 0; n < samples; n += 1) 
+	// for n in samples, assign the current reading of the sensor to the current index of nums and add it to sums
+	{
+		nums[n] = analog10(port);
+		sum += nums[n];
+	}
+	average = ((float)sum / (float)samples); // create the average
+	return ((int)average); // return the average as an integer
+}
+
+int delay(float t)
+{
+	float start_time = seconds();
+	while (seconds() < start_time + t);
 	return 0;
 }
 
