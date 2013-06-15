@@ -1,9 +1,15 @@
 //1 degree ~ 3 ticks
 /* 
 NOTES
+--for now, the plan for the getting around the cube and botguy are the same.
 
-
-
+--also for now, the plan for getting around the booster is to drive on the line
+until a pink or teal blob is seen. Then, it'll get around it somehow. Possibly
+it will keep the blob on one side of the bot. This could also be a possible way
+to speed up getting around the cube. 
+	ADDENDUM:
+	The plan now is to only get one side of poms. 
+	avoid_booster will now turn around from the booster	
 */
 #define ARM_UP // arm is straight up
 #define ARM_DOWN // arm is getting a pom
@@ -17,7 +23,7 @@ NOTES
 #define P_UP // arm is pushing pom in
 #define P_DOWN // arm is retracted
 
-#define TOL 
+#define TOL 2
 
 #define DIFF 100
 #define MID 1000 
@@ -75,8 +81,8 @@ void turn_right(int speed); // turn right at speed , - speed
 void turn_left(int speed); // turn left at -speed , speed
 void drive_straight(int speed); // drive forward at speed , speed
 void drive_back(int speed); // drive backwards at -speed , -speed
-int nv_servo(int s , int fpos , int step = 8);
-int af();
+int nv_servo(int s , int fpos , int step = 8); // move the servo at a less violent speed
+int af(); // freeze all motors
 
 int camera_move_x(); // align the camera in the x direction
 int camera_move_y(); // align the camera in the y direction
@@ -95,7 +101,7 @@ int move_back(); // move back to the line after aligning
 int avoid_cubeguy(); // avoid the cube or botguy
 int avoid_booster(); // avoid the booster
 
-int average(int port , int samples);
+int average(int port , int samples); 
 int delay(int t);
 
 int gc = 0; // green channel
@@ -167,7 +173,7 @@ int main()
 	{
 		camera_update();
 		target.teal.size = get_object_area(tc , 0);
-		printf("TEAL SIZE = %d\n" , target.teal.size);
+		printf("TEAL SIZE = %d\n" , target.teal.size );
 	}
 	int cyc = 0; // variable used to change the behavior of some loops
 	msleep(500);
@@ -211,6 +217,15 @@ int main()
 		}
 	}
 	move_back(); // move back to the line
+	while (1)
+	{
+		turn_left(300);
+		msleep(10);
+		if (middle_on() == true)
+			break;
+	}
+	avoid_cubeguy();
+
 
 }
 
@@ -223,8 +238,8 @@ int nsleep(int t) // sleep for a matter of nanoseconds
 
 int update_blob()
 {
-	camera_update();
-	current.green.x = get_object_center(gc , 0).x;
+	camera_update(); // grab a new frame
+	current.green.x = get_object_center(gc , 0).x;  
 	current.green.y = get_object_center(gc , 0).y;
 	current.green.size = get_object_area(gc , 0);
 	current.orange.x = get_object_center(oc , 0).x;
@@ -254,7 +269,7 @@ int update_link()
 	return 0;
 }
 
-int update_bools(int c)
+int update_bools(int c) 
 {
 	switch (c) {
 		case 1:
@@ -635,9 +650,34 @@ int avoid_cubeguy()
 	{
 		turn_left(300);
 		msleep(10);
-		if ()
+		if (right_on() == true)
+		{
+			af();
+			break;
+		}
 	}
+	nv_servo(lego.arm.port , ARM_UP);
+	while (1)
+	{
+		turn_right(300);
+		msleep(10);
+		if (middle_on() == true)
+		{
+			af();
+			break;
+		}
+	}
+	return 0;
+}
 
+int avoid_booster(int x) // 
+{
+	nv_servo(lego.arm.port , ARM_SCAN);
+	switch (x) {
+		case 1: // pink booster 
+
+
+	}
 }
 
 int average(int port , int samples)
