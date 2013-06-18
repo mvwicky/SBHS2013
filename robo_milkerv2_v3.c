@@ -9,21 +9,21 @@ it will keep the blob on one side of the bot. This could also be a possible way
 to speed up getting around the cube. 
 	ADDENDUM:
 	The plan now is to only get one side of poms. 
-	avoid_booster will now turn around from the booster	
+	avoid_booster will now turn around from the booster.	
 	ADDENDUM:
-	All the aboveis now irrevelent
+	All the above is now irrevelent.
 */
-#define ARM_UP // arm is straight up
-#define ARM_DOWN // arm is getting a pom
-#define ARM_OUT // arm is straight out 
-#define ARM_SCAN // arm islooking at the ground 
-#define ARM_DUMP // arm is dumping the poms in the basket
+#define ARM_UP 1 // arm is straight up
+#define ARM_DOWN 1 // arm is getting a pom
+#define ARM_OUT 1 // arm is straight out 
+#define ARM_SCAN 1 // arm islooking at the ground 
+#define ARM_DUMP 1 // arm is dumping the poms in the basket
 
-#define B_DUMP // basket is dumping poms out
-#define B_UP // basket is collecting poms
+#define B_DUMP 1 // basket is dumping poms out
+#define B_UP 1 // basket is collecting poms
 
-#define P_UP // arm is pushing pom in
-#define P_DOWN // arm is retracted
+#define P_UP 1 // arm is pushing pom in
+#define P_DOWN 1 // arm is retracted
 
 #define TOL 2
 
@@ -81,7 +81,7 @@ void turn_right(int speed); // turn right at speed , - speed
 void turn_left(int speed); // turn left at -speed , speed
 void drive_straight(int speed); // drive forward at speed , speed
 void drive_back(int speed); // drive backwards at -speed , -speed
-int nv_servo(int s , int fpos , int step ); // move the servo at a less violent speed
+int nv_servo(int s , int fpos , int step); // move the servo at a less violent speed
 int af(); // freeze all motors
 
 int camera_move_x(); // align the camera in the x direction
@@ -101,11 +101,11 @@ int move_back(); // move back to the line after aligning
 int avoid_cubeguy(); // avoid the cube or botguy
 
 int average(int port , int samples); 
-int delay(int t);
+int delay(float t);
 
 int gc = 0; // green channel
 int oc = 1; // orange channel
-int pc = 2; // pink channel
+int pc = 2; // pink channelzzzzzzzzzzz
 int tc = 3; // teal channel
 
 int main()
@@ -150,7 +150,7 @@ int main()
 	/*
 		NOTE: Try to keep blob sizes as small as possible.
 	*/
-	while (b_button() = 0) // set the size of the green blob (pom) required for detection 
+	while (b_button() == 0) // set the size of the green blob (pom) required for detection 
 	{
 		camera_update();
 		target.green.size = get_object_area(gc , 0);
@@ -174,7 +174,7 @@ int main()
 		target.teal.size = get_object_area(tc , 0);
 		printf("TEAL SIZE = %d\n" , target.teal.size );
 	}
-	int cyc = 0; // variable used to change the behavior of some loops
+	//int cyc = 0; // variable used to change the behavior of some loops
 	msleep(500);
 	while (z_button() == 0) // wait and update until the z button is pressed
 	{
@@ -208,8 +208,8 @@ int main()
 	while (1)
 	{
 		update_blob();
-		turn_right();
-		if (update_poms(1) == true)
+		turn_right(300);
+		if (update_bools(1) == true)
 		{
 			get_pom(); // get 2nd green pom
 			pom_push();
@@ -291,6 +291,7 @@ int update_bools(int c)
 				return false;
 
 	}
+	return 0;
 }
 
 void turn_right(int speed)
@@ -331,7 +332,7 @@ int nv_servo(int s , int fpos , int step)
 		}
 		return 0;
 	}
-	if (cpos < fpos)
+	else if (cpos < fpos)
 	{
 		while (cpos < fpos)
 		{
@@ -342,8 +343,9 @@ int nv_servo(int s , int fpos , int step)
 		}
 		return 0;		
 	}
-	if (cpos == fpos)
+	else if (cpos == fpos)
 		return 0;	
+	return 0;
 }
 
 int af()
@@ -352,6 +354,7 @@ int af()
 	freeze(1);
 	freeze(2);
 	freeze(3);
+	return 0;
 }
 
 int camera_move_x()
@@ -414,6 +417,7 @@ int left_on()
 		return true;
 	if (lego.th_left.val <= lego.thresh)
 		return false;
+	return 1;
 }
 
 int middle_on()
@@ -423,6 +427,7 @@ int middle_on()
 		return true;
 	if (lego.th_middle.val <= lego.thresh)
 		return false;
+	return 1;
 }
 
 int right_on()
@@ -432,6 +437,7 @@ int right_on()
 		return true;
 	if (lego.th_right.val <= lego.thresh)
 		return false;
+	return 1;
 }
 
 int line_follow()
@@ -496,7 +502,7 @@ int line_follow_slow()
 	printf("%d , %d , %d\n" , left_on() , middle_on() , right_on());
 	int low = (int)(LOW / 2);
 	int high = (int)(HIGH / 2);
-	if (left_on() == false && middle_on() == false && right_on() == false // 0 , 0 , 0 // spin in place
+	if (left_on() == false && middle_on() == false && right_on() == false )// 0 , 0 , 0 // spin in place
 	{
 		mav(lego.left.port , low);
 		mav(lego.right.port , -low);
@@ -612,12 +618,12 @@ int move_back()
 int avoid_cubeguy()
 {
 	update_link();
-	nv_servo(lego.arm.port , ARM_UP);
+	nv_servo(lego.arm.port , ARM_UP , 8);
 	while (1)
 	{
 		update_link();
 		turn_left(500);
- , 8		msleep(10);
+		msleep(10);
 		if (middle_on() == true)
 		{
 			af();
@@ -685,6 +691,15 @@ int delay(float t)
 	float start_time = seconds();
 	while (seconds() < start_time + t);
 	return 0;
+}
+
+float time_taken(*func)
+{
+	float start = seconds();
+	func();
+	float finish = seconds();
+	printf("%f" , (finish - start));
+
 }
 
 /*
