@@ -47,12 +47,14 @@ struct blob {
 	}green , orange;
 }current , target;
 
-typedef enum {true , false} bool;
+void af();
 
 void update_blob();
 
 void turn_right(int speed);
 void turn_left(int speed);
+void forward(int speed);
+void backward(int speed);
 
 int camera_move_x();
 int camera_move_y();
@@ -139,14 +141,17 @@ int main()
 	update_blob();
 	int t = seconds();
 	int cyc = 0;
-	set_servo_position(basket_servo , B_UP);
-	msleep(500);
+	set_servo_position(arm_servo , ARM_UP);
+	msleep(100);
+	set_servo_position(basket_servo , 2047);
+	msleep(100);
 	while (a_button() == 0);
+	set_servo_position(basket_servo , B_UP);
+	msleep(100);
 	while (1)
 	{
 		printf("%d , %d , %d\n" , left_on() , middle_on() , right_on());
-		mav(lego.left.port , 300);
-		mav(lego.right.port , 300);
+		forward(300);
 		msleep(10);
 		if (left_on() == true || middle_on() == true || right_on() == true)
 		{
@@ -154,13 +159,8 @@ int main()
 			break;
 		}
 	}
-	ao();
-	while (1)
-	{
-		turn_left(300);
-		if (left_on() == false)
-			break;
-	}
+	set_servo_position(arm_servo , ARM_SCAN);
+	msleep(250);
 	while (1) // follow the line until a blob of orange and green is seen
 	{
 		update_blob();
@@ -170,22 +170,21 @@ int main()
 		{
 			ao();
 			turn_left(300);
-			msleep(150);
+			msleep(200);
 		}
 		if (current.orange.size >= target.orange.size && current.green.size > target.green.size)
 			break;
 	}
 	turn_left(300);
 	msleep(100);
-	mav(lego.left.port , -300);
-	mav(lego.right.port , -300);
+	backward(300);
 	msleep(250);
 	get_pom(); // get first pom
 	pom_push();
 	nv_servo(arm_servo , ARM_SCAN);
+	move_back();
 	ao();
-	mav(lego.left.port , -300);
-	mav(lego.right.port , -300);
+	backward(300);
 	msleep(1500);
 	turn_right(300);
 	msleep(1000);
@@ -204,10 +203,13 @@ int main()
 	}
 	get_pom(); // get second pom
 	pom_push();
+	nv_servo(arm_servo , ARM_SCAN);
 	msleep(100);
 	set_servo_position(basket_servo , 1400);
 	msleep(250);
 	set_servo_position(basket_servo , 1600);
+	backward(500);
+	msleep(1000);
 	avoid_cubeguy();
 	cyc = 0;
 	while (1) // follow the line until a blob of orange and green is seen
@@ -219,7 +221,7 @@ int main()
 		{
 			ao();
 			turn_left(300);
-			msleep(150);
+			msleep(200);
 		}
 		if (current.orange.size >= target.orange.size && current.green.size > target.green.size)
 			break;
@@ -227,8 +229,8 @@ int main()
 	get_pom(); // get third pom
 	pom_push();
 	nv_servo(arm_servo , ARM_SCAN);
-	mav(lego.left.port , -300);
-	mav(lego.right.port , -300);
+	move_back();
+	backward(300);
 	msleep(1500);
 	turn_right(300);
 	msleep(1000);
@@ -246,12 +248,39 @@ int main()
 	}
 	get_pom(); // get fourth pom
 	pom_push();
+	nv_servo(arm_servo , ARM_SCAN);
+	move_back();
 	msleep(100);
 	set_servo_position(basket_servo , 1400);
 	msleep(250);
 	set_servo_position(basket_servo , 1600);
 	ao();
-	
+	while (1)
+	{
+		turn_right(400);
+		if (right_on() == true)
+			break;
+	}
+	while (1)
+	{
+		t_line_follow();
+		if (current.orange.size >= target.orange.size)
+			break;
+	}
+	turn_left(400);
+	msleep(1500);
+	backward(400);
+	msleep(1000);
+	set_servo_position(basket_servo , B_DOWN);
+	msleep(500);
+}
+
+void af()
+{
+	freeze(0);
+	freeze(1);
+	freeze(2);
+	freeze(3);
 }
 
 void update_blob()
@@ -277,6 +306,18 @@ void turn_left(int speed)
 	mav(lego.right.port , speed);
 }
 
+void forward(int speed)
+{
+	mav(lego.left.port , speed);
+	mav(lego.right.port , speed);
+}
+
+void backward(int speed)
+{
+	mav(lego.left.port , -speed);
+	mav(lego.right.port , -speed);
+}
+
 int camera_move_x()
 {	
 	int speed = 150;
@@ -285,7 +326,7 @@ int camera_move_x()
 	{
 		printf("MOVING RIGHT\n");
 		turn_right(speed);
-		msleep(10);
+		msleep(8);
 		xl_count += 1;
 		return 1;
 	}
@@ -293,7 +334,7 @@ int camera_move_x()
 	{
 		printf("MOVING LEFT\n");
 		turn_left(speed);
-		msleep(10);
+		msleep(8);
 		xr_count += 1;
 		return 1;
 	}
@@ -316,7 +357,8 @@ int camera_move_y()
 		printf("MOVING BACKWARDS\n");
 		mav(lego.left.port , lspeed);
 		mav(lego.right.port , lspeed);
-		msleep(10);
+		msleep(8);
+		y_count -= 1;
 		return 1;
 	}
 	if ((current.green.y < (target.green.y - TOL))) // target is too low a y value
@@ -324,7 +366,7 @@ int camera_move_y()
 		printf("MOVING FORWARDS\n");
 		mav(lego.left.port , hspeed);
 		mav(lego.right.port , hspeed);
-		msleep(10);
+		msleep(8);
 		y_count += 1;
 		return 1;
 	}
@@ -450,7 +492,7 @@ int line_follow_slow()
 {
 	int low = (int)(LOW / 2);
 	int high = (int)(HIGH / 2);
-	if (left_on() == false && middle_on() == false && right_on() == false // 0 , 0 , 0 // spin in place
+	if (left_on() == false && middle_on() == false && right_on() == false) // 0 , 0 , 0 // spin in place
 	{
 		mav(lego.left.port , low);
 		mav(lego.right.port , -low);
@@ -556,17 +598,14 @@ int pom_push()
 
 int move_back()
 {
-	int xl_back = (xl_count * 10);
-	int xr_back = (xr_count * 10);
-	int y_back = (y_count * 10);
-	mav(lego.left.port , 300); // cancel out the leftward movements
-	mav(lego.right.port , -300);
+	int xl_back = (xl_count * 8);
+	int xr_back = (xr_count * 8);
+	int y_back = (y_count * 8);
+	turn_right(200); // cancel out the leftward movements
 	msleep(xl_back);
-	mav(lego.left.port , -300); // cancel out rightward movements
-	mav(lego.right.port , 300);
+	turn_left(200); // cancel out rightward movements
 	msleep(xr_back);
-	mav(lego.left.port , -300); // cancel out forwards movements
-	mav(lego.right.port , -300);
+	backward(200); // cancel out forwards movements
 	msleep(y_back);
 	return 0;
 }
@@ -595,7 +634,7 @@ int avoid_cubeguy()
 		}
 	}
 	mav(lego.left.port , 300);
-	mav(lego.right.port , -300);
+	mav(lego.right.port , -300); 
 	msleep(1250);
 	ao();
 	msleep(100);
@@ -662,7 +701,7 @@ int nv_servo(int s , int fpos)
 	{
 		while (cpos > fpos)
 		{
-			cpos -= 8;
+			cpos -= 16;
 			set_servo_position(s , cpos);
 			cpos = get_servo_position(s);
 			msleep(10);
@@ -673,7 +712,7 @@ int nv_servo(int s , int fpos)
 	{
 		while (cpos < fpos)
 		{
-			cpos += 8;
+			cpos += 16;
 			set_servo_position(s , cpos);
 			cpos = get_servo_position(s);
 			msleep(10);

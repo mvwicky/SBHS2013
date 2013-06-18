@@ -13,17 +13,17 @@ to speed up getting around the cube.
 	ADDENDUM:
 	All the above is now irrevelent.
 */
-#define ARM_UP 1 // arm is straight up
-#define ARM_DOWN 1 // arm is getting a pom
-#define ARM_OUT 1 // arm is straight out 
-#define ARM_SCAN 1 // arm islooking at the ground 
-#define ARM_DUMP 1 // arm is dumping the poms in the basket
+#define ARM_UP 570 // arm is straight up
+#define ARM_DOWN 1600 // arm is getting a pom
+#define ARM_OUT 1568 // arm is straight out 
+#define ARM_SCAN 1095 // arm islooking at the ground 
+#define ARM_DUMP 365 // arm is dumping the poms in the basket
 
 #define B_DUMP 1 // basket is dumping poms out
 #define B_UP 1 // basket is collecting poms
 
-#define P_UP 1 // arm is pushing pom in
-#define P_DOWN 1 // arm is retracted
+#define P_UP 0 // arm is pushing pom in
+#define P_DOWN 2047 // arm is retracted
 
 #define TOL 2
 
@@ -62,7 +62,7 @@ struct blob { // this struct contains the x , y , and size values for each color
 		int x;
 		int y;
 		int size;
-	}green , orange , pink , teal;
+	}green , orange;
 }current , target;
 
 int update_blob(); // updates the screen
@@ -73,8 +73,6 @@ int update_bools(int c); /* Evaluates several different cases based on the camer
 							1: Orange size and Green size above target size
 							2: Orange size above target size
 							3: Green size above target size
-							4: Pink size above target size
-							5: Teal size above target size
 						 */
 
 void turn_right(int speed); // turn right at speed , - speed
@@ -105,8 +103,6 @@ int delay(float t);
 
 int gc = 0; // green channel
 int oc = 1; // orange channel
-int pc = 2; // pink channelzzzzzzzzzzz
-int tc = 3; // teal channel
 
 int main()
 {
@@ -114,14 +110,12 @@ int main()
 	set_a_button_text("Coords"); 
 	set_b_button_text("Green Size");
 	set_c_button_text("Orange Size");
-	set_x_button_text("Pink Size");
-	set_y_button_text("Teal Size");
 	set_z_button_text("Go");
 	camera_open(LOW_RES); // open the camera in the lowest resolution (preferable)
 	camera_update(); // get a new frame from the camera
 	lego.thresh = 450; // set the threshold (black - white) (for line following)
-	lego.left.port = 0; // left drive motor port
-	lego.right.port = 2; // right drive motor port
+	lego.left.port = 3; // left drive motor port
+	lego.right.port = 0; // right drive motor port
 	lego.x_pos.port = 1; // arm x coordinate adjuster port
 	lego.arm.port = 1; // pom picker upper arm servo port
 	lego.push.port = 0; // pom pusher servo port
@@ -138,8 +132,9 @@ int main()
 	enable_servo(lego.push.port);
 	enable_servo(lego.basket.port);
 	nv_servo(lego.arm.port , ARM_SCAN , 8); // move arm to scanning mode (picking up a pom)
-	nv_servo(lego.basket.port , B_UP , 8); // move basket up (collecting poms)
-	nv_servo(lego.push.port , P_DOWN , 8); // move pusher down (not pushing a pom)
+	//nv_servo(lego.basket.port , B_UP , 8); // move basket up (collecting poms)
+	set_servo_position(lego.push.port , P_DOWN); // move pusher down (not pushing a pom)
+	msleep(500);
 	while (a_button() == 0) // set the coordinates where the arm should come down
 	{
 		camera_update();
@@ -162,19 +157,7 @@ int main()
 		target.orange.size = get_object_area(oc , 0);
 		printf("ORANGE SIZE = %d\n" , target.orange.size);
 	}
-	while (x_button() == 0) // set the size of the pink blob (booster) required for detection
-	{
-		camera_update();
-		target.pink.size = get_object_area(pc , 0);
-		printf("PINK SIZE = %d\n" , target.pink.size);
-	}
-	while (y_button() == 0) // set the size of the teal blob (booster) required for detection
-	{
-		camera_update();
-		target.teal.size = get_object_area(tc , 0);
-		printf("TEAL SIZE = %d\n" , target.teal.size );
-	}
-	//int cyc = 0; // variable used to change the behavior of some loops
+	int cyc = 0; // variable used to change the behavior of some loops
 	msleep(500);
 	while (z_button() == 0) // wait and update until the z button is pressed
 	{
@@ -197,6 +180,11 @@ int main()
 	{
 		update_blob();
 		line_follow();
+		if (cyc % 50 == 0)
+		{
+			move_left(300);
+			msleep(10);
+		}
 		if (update_bools(1) == true)
 		{
 			get_pom(); // get 1st green pom
@@ -691,15 +679,6 @@ int delay(float t)
 	float start_time = seconds();
 	while (seconds() < start_time + t);
 	return 0;
-}
-
-float time_taken(*func)
-{
-	float start = seconds();
-	func();
-	float finish = seconds();
-	printf("%f" , (finish - start));
-
 }
 
 /*
