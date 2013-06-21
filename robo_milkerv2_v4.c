@@ -14,7 +14,7 @@ to speed up getting around the cube.
 	All the above is now irrevelent.
 */
 #define ARM_UP 570 // arm is straight up
-#define ARM_DOWN 1600 // arm is getting a pom
+#define ARM_DOWN 1700 // arm is getting a pom
 #define ARM_OUT 1568 // arm is straight out 
 #define ARM_SCAN 1095 // arm islooking at the ground 
 #define ARM_DUMP 365 // arm is dumping the poms in the basket
@@ -75,10 +75,10 @@ int update_bools(int c); /* Evaluates several different cases based on the camer
 							3: Green size above target size
 						 */
 
-void turn_right(int speed); // turn right at speed , - speed
-void turn_left(int speed); // turn left at -speed , speed
-void drive_straight(int speed); // drive forward at speed , speed
-void drive_back(int speed); // drive backwards at -speed , -speed
+inline void turn_right(int speed); // turn right at speed , - speed
+inline void turn_left(int speed); // turn left at -speed , speed
+inline void drive_straight(int speed); // drive forward at speed , speed
+inline void drive_back(int speed); // drive backwards at -speed , -speed
 int nv_servo(int s , int fpos , int step); // move the servo at a less violent speed
 int af(); // freeze all motors
 
@@ -115,18 +115,17 @@ int main()
 	camera_update(); // get a new frame from the camera
 	lego.thresh = 450; // set the threshold (black - white) (for line following)
 	// motor and servo ports
-	lego.left.port = 3; // left drive motor port
+	lego.left.port = 2; // left drive motor port
 	lego.right.port = 0; // right drive motor port
 	lego.x_pos.port = 1; // arm x coordinate adjuster port
-	lego.arm.port = 1; // pom picker upper arm servo port
-	lego.push.port = 0; // pom pusher servo port
-	lego.basket.port = 3; // pom basket servo port 
+	lego.arm.port = 3; // pom picker upper arm servo port
+	lego.push.port = 2; // pom pusher servo port
+	lego.basket.port = 1; // pom basket servo port 
 	// sensor ports
-	lego.th_left.port = 3; // left tophat sensor port
-	lego.th_right.port = 2; // right tophat sensor port
+	lego.th_left.port = 2; // left tophat sensor port
+	lego.th_right.port = 0; // right tophat sensor port
 	lego.th_middle.port = 1; // middle tophar sensor port
 	lego.ET.port = 7; // ET sensor port
-	lego.bTH.port = 0;
 	// other stuff
 	set_analog_pullup(lego.ET.port , 0); // change the mode of the ET sensor port to return the correct values
 	set_analog_pullup(lego.th_left.port , 1); // change the mode of the tophat sensors to return the correct value
@@ -146,9 +145,6 @@ int main()
 		target.green.y = get_object_center(gc , 0).y;
 		printf("(%d , %d)\n" , target.green.x , target.green.y);
 	}
-	/*
-		NOTE: Try to keep blob sizes as small as possible.
-	*/
 	while (b_button() == 0) // set the size of the green blob (pom) required for detection 
 	{
 		camera_update();
@@ -161,56 +157,28 @@ int main()
 		target.orange.size = get_object_area(oc , 0);
 		printf("ORANGE SIZE = %d\n" , target.orange.size);
 	}
-	int cyc = 0; // variable used to change the behavior of some loops
 	msleep(500);
+	int cyc = 0;
 	while (z_button() == 0) // wait and update until the z button is pressed
 	{
-		update_blob();
 		update_link();
-	}
+		update_blob();
+	}	
 	shut_down_in(118);
-	while (1) // drive straight until the line is detected
+	while (current.orange.size < target.orange.size && current.green.size < target.green.size) 
 	{
-		drive_straight(500);
-		if (left_on() == true || middle_on() == true || right_on() == true)
-			break;
-	}
-	while (1) // follow the line until orange and green poms are found. Then pickup.
-	{
+		update_link();
 		update_blob();
 		line_follow();
-		if (cyc % 50 == 0)
+		cyc += 1;
+		if (cyc % 25 == 0)
 		{
 			turn_left(300);
 			msleep(10);
 		}
-		if (update_bools(1) == true)
-		{
-			get_pom(); // get 1st green pom
-			pom_push();
-			break;
-		}
 	}
-	move_back(); // move back the the line
-	while (1)
-	{
-		update_blob();
-		turn_right(300);
-		if (update_bools(1) == true)
-		{
-			get_pom(); // get 2nd green pom
-			pom_push();
-		}
-	}
-	move_back(); // move back to the line
-	while (1)
-	{
-		turn_left(300);
-		msleep(10);
-		if (middle_on() == true)
-			break;
-	}
-	avoid_cubeguy();
+	get_pom();
+	pom_push();
 }
 
 int update_blob()
@@ -237,12 +205,13 @@ int update_link()
 	lego.th_middle.val = analog10(lego.th_middle.port);
 	lego.th_right.val = analog10(lego.th_right.port);
 	lego.ET.val = analog10(lego.ET.port);
-	lego.bTH.val = analog10(lego.bTH.port);
 	return 0;
 }
 
 int update_bools(int c) 
 {
+	update_blob();
+	update_link();
 	switch (c) {
 		case 1:
 			if (current.orange.size >= target.orange.size && current.green.size >= target.green.size)
@@ -263,25 +232,25 @@ int update_bools(int c)
 	return 0;
 }
 
-void turn_right(int speed)
+inline void turn_right(int speed)
 {
 	mav(lego.left.port , speed);
 	mav(lego.right.port , -speed);
 }
 
-void turn_left(int speed)
+inline void turn_left(int speed)
 {
 	mav(lego.left.port , -speed);
 	mav(lego.right.port , speed);
 }
 
-void drive_straight(int speed)
+inline void drive_straight(int speed)
 {
 	mav(lego.left.port , speed);
 	mav(lego.right.port , speed);
 }
 
-void drive_back(int speed)
+inline void drive_back(int speed)
 {
 	mav(lego.left.port , -speed);
 	mav(lego.right.port , -speed);
@@ -328,22 +297,26 @@ int af()
 
 int camera_move_x()
 {
-	int speed = 700;
+	int speed = 300;
 	update_blob();
 	update_link();
-	if ((current.green.x > (target.green.x + TOL))) // target is to the left
+	if ((current.green.x > (target.green.x + TOL)))
 	{
-		mrp(lego.x_pos.port , -speed , DEG);
-		bmd(lego.x_pos.port);
+		mav(lego.left.port , speed);
+		mav(lego.right.port , -speed);
+		msleep(8);
+		ao();
 		return 1;
 	}
-	else if ((current.green.x < (target.green.x - TOL))) // target is to the right
+	if ((current.green.x < (target.green.x - TOL))) 
 	{
-		mrp(lego.x_pos.port , speed , DEG);
-		bmd(lego.x_pos.port);
+		mav(lego.left.port , -speed);
+		mav(lego.right.port , speed);
+		msleep(8);
+		ao();
 		return 1;
 	}
-	else if ((current.green.x >= (target.green.x - TOL)) && (current.green.x <= (target.green.x + TOL))) // target is in range
+	if ((current.green.x >= (target.green.x - TOL)) && (current.green.x <= (target.green.x + TOL))) // target is in range
 	{
 		af();
 		return 0;
@@ -353,25 +326,25 @@ int camera_move_x()
 
 int camera_move_y() 
 {
-	int speed = 200;
+	int speed = 300;
 	update_blob();
 	update_link();
 	if ((current.green.y > (target.green.y + TOL))) // target has too great a y value
 	{
 		printf("MOVING BACKWARDS\n");
-		drive_back(300);
+		drive_back(speed);
 		msleep(10);
 		return 1;
 	}
-	else if ((current.green.y < (target.green.y - TOL))) // target is too low a y value
+	if ((current.green.y < (target.green.y - TOL))) // target is too low a y value
 	{
 		printf("MOVING FORWARDS\n");
-		drive_straight(300);
+		drive_straight(speed);
 		msleep(10);
 		y_count += 1;
 		return 1;
 	}
-	else if ((current.green.y >= (target.green.y - TOL)) && (current.green.y <= (target.green.y + TOL))) // target is in range
+	if ((current.green.y >= (target.green.y - TOL)) && (current.green.y <= (target.green.y + TOL))) // target is in range
 	{
 		af();
 		return 0;
@@ -533,6 +506,7 @@ int get_pom()
 	while (1)
 	{
 		update_link();
+		update_blob();
 		x = camera_move_x();
 		y = camera_move_y();
 		if (x == 0 && y == 0)
@@ -540,7 +514,9 @@ int get_pom()
 			af();
 			printf("IN POS\n");
 			nv_servo(lego.arm.port , ARM_DOWN , 8);
-			nv_servo(lego.arm.port , ARM_OUT , 8);
+			nv_servo(lego.arm.port , ARM_SCAN , 8);
+			nv_servo(lego.arm.port , ARM_DOWN , 8);
+			nv_servo(lego.arm.port , ARM_SCAN , 8);
 			nv_servo(lego.arm.port , ARM_DOWN , 8);
 			nv_servo(lego.arm.port , ARM_DUMP , 8);
 			msleep(500);

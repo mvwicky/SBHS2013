@@ -1,11 +1,11 @@
 // FIND A WAY TO GET AROUND THE BOOSTERS
 // SET THE ET DISTANCE TO A CORRECT VALUE
 
-#define ARM_DUMP 250 // dump the poms in the basket
-#define ARM_UP 635 // arm is straight up
-#define ARM_DOWN 1570 // down for the pom getter arm
-#define ARM_SCAN 990 // camera is parallel to the ground
-#define ARM_OUT 1315
+#define ARM_UP 570 // arm is straight up
+#define ARM_DOWN 1700 // arm is getting a pom
+#define ARM_OUT 1568 // arm is straight out 
+#define ARM_SCAN 1095 // arm islooking at the ground 
+#define ARM_DUMP 365 // arm is dumping the poms in the basket
 
 #define B_UP 1600 // up for the basket
 #define B_DOWN 750 // down for the basket (dumping)
@@ -83,12 +83,12 @@ int avoid_booster();
 
 int nv_servo(int s , int fpos);
 
-int arm_servo = 1; // servo of the pom getter arm
-int push_servo = 0; // servo of the pusher arm
-int basket_servo = 2; // servo of the basket
-int left_s = 1; // port for the left top hat sensor
-int right_s = 7; // port for the right top hat sensor
-int middle_s = 4; // port for the middle top hat sensor
+int arm_servo = 3; // servo of the pom getter arm
+int push_servo = 2; // servo of the pusher arm
+int basket_servo = 1; // servo of the basket
+int left_s = 2; // port for the left top hat sensor
+int right_s = 0; // port for the right top hat sensor
+int middle_s = 1; // port for the middle top hat sensor
 int ET_s = 0;
 int TH_s = 2;
 
@@ -98,8 +98,8 @@ int main()
 {
 	enable_servo(arm_servo);
 	nv_servo(arm_servo , ARM_SCAN);
-	lego.left.port = 0;
-	lego.right.port = 2;
+	lego.left.port = 2;
+	lego.right.port = 0;
 	extra_buttons_show(1);
 	set_a_button_text("COORDS");
 	set_b_button_text("GREEN SIZE");
