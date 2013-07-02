@@ -6,7 +6,7 @@
 #define ARM_SCAN 1080 // arm is looking at the ground 
 #define ARM_DUMP 295 // arm is dumping the poms in the basket
 
-#define B_UP 1882 // up for the basket
+#define B_UP 1712 // up for the basket
 #define B_DOWN 1045 // down for the basket (dumping)
 
 #define P_UP 0 // push pom
@@ -14,17 +14,19 @@
 
 #define STOL 1
 #define TOL 2
-#define THRESH 400
+#define THRESH 575
 #define ET_DIST 600 // subject to change
 #define TH_DIST 125
 
 #define DIFF 100
-#define MID 900
+#define MID 950
 #define HIGH MID + DIFF
 #define LOW MID - DIFF
 
 #define true 1
 #define false 0
+#define and &&
+#define or ||
 
 int xl_count = 0;
 int xr_count = 0;
@@ -35,13 +37,13 @@ struct robot {
 		int port;
 	}left , right;
 }lego;
-
+ 
 struct blob {
 	struct color {
 		int x;
 		int y;
 		int size;
-	}green , orange;
+	}green , orange , pink , teal;
 }current , target;
 
 void af();
@@ -68,6 +70,8 @@ int get_TH();
 
 int t_line_follow();
 int line_follow_slow();
+int line_follow_left();
+int line_follow_back();
 
 int get_pom();
 
@@ -76,6 +80,7 @@ int pom_push();
 int move_back();
 
 int avoid_cubeguy();
+int ac2();
 
 int nv_servo(int s , int fpos);
 
@@ -105,13 +110,16 @@ int main()
 	set_analog_pullup(left_s , 1);
 	set_analog_pullup(middle_s , 1);
 	set_analog_pullup(right_s , 1);
+	/*
 	float start = seconds();
 	while (c_button() == 0)
 	{
-		t_line_follow();
+		set_servo_position(arm_servo , ARM_UP);
+		line_follow_back();
 	}
 	printf("%f\n" , seconds() - start);
-	while (a_button() == 0);
+	//while (a_button() == 0);
+	*/
 	while (a_button() == 0) // set target green coordinates 
 	{
 		camera_update();
@@ -139,15 +147,13 @@ int main()
 	nv_servo(arm_servo , ARM_SCAN);
 	set_servo_position(push_servo , P_DOWN);
 	set_servo_position(basket_servo , B_UP);
-	camera_update();
 	update_blob();
 	int t = seconds();
 	int cyc = 0;
-	set_servo_position(arm_servo , ARM_UP);
-	msleep(100);
 	set_servo_position(basket_servo , B_UP);
 	msleep(100);
-	while (a_button() == 0);
+	while (a_button() == 0) 
+	update_blob();
 	shut_down_in(118);
 	set_servo_position(basket_servo , B_UP);
 	msleep(100);
@@ -158,14 +164,16 @@ int main()
 		update_blob();
 		t_line_follow();
 		cyc += 1;
-		if (cyc % 40 == 0)
+		if (cyc % 25 == 0)
 		{
-			mav(lego.left.port , 500);
-			mav(lego.right.port , 800);s
-			msleep(200);
+			turn_left(750);
+			msleep(450);
 		}
 		if (current.orange.size >= target.orange.size && current.green.size > target.green.size)
-			break;
+		{
+			ao();
+			break;			
+		}
 	}
 	turn_left(300);
 	msleep(100);
@@ -177,9 +185,9 @@ int main()
 	move_back();
 	ao();
 	backward(300);
-	msleep(500);
+	msleep(750);
 	turn_right(300);
-	msleep(1000);
+	msleep(1500);
 	cyc = 0;
 	while (1) // turn to next pom
 	{
@@ -188,8 +196,7 @@ int main()
 		msleep(10);
 		if (current.green.size >= target.green.size && current.orange.size >= target.orange.size)
 		{
-			turn_left(300);
-			msleep(10);
+			ao();
 			break;
 		}
 	}
@@ -197,8 +204,12 @@ int main()
 	pom_push();
 	nv_servo(arm_servo , ARM_SCAN);
 	set_servo_position(basket_servo , B_UP);
-	avoid_cubeguy();
+	turn_left(300);
+	msleep(500);
+	ac2();
+	nv_servo(arm_servo , ARM_SCAN);
 	cyc = 0;
+	/*
 	while (1) // follow the line until a blob of orange and green is seen
 	{
 		update_blob();
@@ -212,32 +223,47 @@ int main()
 		if (current.orange.size >= target.orange.size && current.green.size > target.green.size)
 			break;
 	}
+	*/
+	while(1)
+	{
+		update_blob();
+		turn_left(300);
+		msleep(10);
+		if ((current.green.size >= target.green.size && current.orange.size >= target.orange.size) || current.green.size >= target.green.size)
+		{
+			ao();
+			break;
+		}
+	}
 	get_pom(); // get third pom
 	pom_push();
-	nv_servo(arm_servo , ARM_SCAN);
+	nv_servo(arm_servo , ARM_UP);
 	move_back();
 	backward(300);
 	msleep(500);
-	turn_right(300);
-	msleep(1000);
-	while (1) // turn to next pom
+	int start = seconds();
+	while(1)
 	{
 		update_blob();
 		turn_right(300);
 		msleep(10);
-		if (current.green.size >= target.green.size && current.orange.size >= target.orange.size)
+		if (seconds() - start >= 1)
 		{
-			turn_left(300);
-			msleep(10);
+			ao();
 			break;
 		}
 	}
+	turn_right(300);
+	msleep(500);
+	nv_servo(arm_servo , ARM_SCAN);
 	get_pom(); // get fourth pom
 	pom_push();
-	nv_servo(arm_servo , ARM_SCAN);
 	move_back();
 	set_servo_position(basket_servo , B_UP);
 	ao();
+	turn_right(400);
+	msleep(3000);
+	nv_servo(arm_servo , ARM_SCAN);
 	while (1)
 	{
 		line_follow_left();
@@ -459,8 +485,8 @@ int t_line_follow()
 
 int line_follow_slow()
 {
-	int low = (int)(LOW / 2);
-	int high = (int)(HIGH / 2);
+	int low = (int)(LOW / 3);
+	int high = (int)(HIGH / 3);
 	if (left_on() == false && middle_on() == false && right_on() == false) // 0 , 0 , 0 // spin in place
 	{
 		mav(lego.left.port , low);
@@ -470,8 +496,8 @@ int line_follow_slow()
 	}
 	if (left_on() == true && middle_on() == false && right_on() == false) // 1 , 0 , 0 // 
 	{
-		mav(lego.left.port , low);
-		mav(lego.right.port , high);
+		mav(lego.left.port , low - 50);
+		mav(lego.right.port , high + 100);
 		msleep(10);
 		return 0;
 	}
@@ -484,8 +510,8 @@ int line_follow_slow()
 	}
 	if (get_left() < THRESH && get_middle() < THRESH && get_right() > THRESH) // 0 , 0 , 1
 	{
-		mav(lego.left.port , high);
-		mav(lego.right.port , low);
+		mav(lego.left.port , high + 100);
+		mav(lego.right.port , low - 50);
 		msleep(10);
 		return 0;
 	}  
@@ -567,6 +593,59 @@ int line_follow_left()
 	return 0;
 }
 
+int line_follow_back()
+{
+	if (get_left() < THRESH && get_middle() < THRESH && get_right() < THRESH) // 0 , 0 , 0 // spin in place
+	{
+		mav(lego.left.port , LOW);
+		mav(lego.right.port , -LOW);
+		msleep(10);
+		return 0;
+	}
+	if (get_left() > THRESH && get_middle() < THRESH && get_right() < THRESH) // 1 , 0 , 0 // 
+	{
+		mav(lego.left.port , -HIGH);
+		mav(lego.right.port , -LOW);
+		msleep(10);
+		return 0;
+	}
+	if (get_left() < THRESH && get_middle() > THRESH && get_right() < THRESH) // 0 , 1 , 0
+	{
+		mav(lego.left.port , -HIGH);
+		mav(lego.right.port , -HIGH);
+		msleep(10);
+		return 0;
+	}
+	if (get_left() < THRESH && get_middle() < THRESH && get_right() > THRESH) // 0 , 0 , 1
+	{
+		mav(lego.left.port , -LOW);
+		mav(lego.right.port , -HIGH);
+		msleep(10);
+		return 0;
+	}  
+	if (get_left() > THRESH && get_middle() > THRESH && get_right() < THRESH) // 1 , 1 , 0
+	{
+		mav(lego.left.port , -LOW);
+		mav(lego.right.port , -HIGH);
+		msleep(10);
+		return 0;
+	}
+	if (get_left() < THRESH && get_middle() > THRESH && get_right() > THRESH) // 0 , 1 , 1
+	{
+		mav(lego.left.port , -LOW);
+		mav(lego.right.port , -HIGH);
+		msleep(10);
+		return 0;
+	}
+	if (get_left() > THRESH && get_middle() > THRESH && get_right() > THRESH) // 1 , 1 , 1
+	{
+		mav(lego.left.port , LOW);
+		mav(lego.right.port , -LOW);
+		msleep(10);
+		return 0;
+	}
+	return 0;
+}
 
 int get_pom()
 {
@@ -600,9 +679,7 @@ int get_pom()
 
 int pom_push()
 {
-	msleep(100);
 	nv_servo(arm_servo , ARM_DUMP);
-	msleep(500);
 	set_servo_position(push_servo , P_UP);
 	msleep(500);
 	set_servo_position(push_servo , P_DOWN);
@@ -614,15 +691,13 @@ int pom_push()
 	msleep(500);
 	set_servo_position(push_servo , P_UP);
 	msleep(500);
-	set_servo_position(push_servo , P_UP);
 	set_servo_position(push_servo , P_DOWN);
 	msleep(500);
 	set_servo_position(push_servo , P_UP);
 	msleep(500);
 	set_servo_position(push_servo , P_UP);
 	set_servo_position(push_servo , P_DOWN);
-	ao();
-	update_blob();
+	msleep(500);
 	return 0;
 }
 
@@ -703,6 +778,48 @@ int avoid_cubeguy()
 	}
 	nv_servo(arm_servo , ARM_SCAN);
 	return 0;
+}
+
+int ac2()
+{
+	nv_servo(arm_servo , ARM_UP);
+	while (middle_on() == false)
+	{
+		mav(lego.left.port , -500);
+		mav(lego.right.port , 500);
+		msleep(10);
+		if (middle_on() == true)
+		{
+			ao();
+			break;
+		}
+	}
+	turn_left(300);
+	msleep(200);
+	backward(300);
+	msleep(1000);
+	nv_servo(arm_servo , ARM_UP + 25);
+	while (1)
+	{
+		line_follow_slow();
+		if (get_ET() > ET_DIST)
+		{
+			ao();
+			break;
+		}
+	}
+	int start = seconds();
+	while (1)
+	{
+		line_follow_slow();
+		if (seconds() - start > 3) 
+		{
+			ao();
+			break;
+		}
+	}
+	backward(300);
+	msleep(1500);
 }
 
 int nv_servo(int s , int fpos)
