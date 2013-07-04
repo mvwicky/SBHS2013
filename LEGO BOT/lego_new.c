@@ -6,7 +6,7 @@
 #define ARM_SCAN 1080 // arm is looking at the ground 
 #define ARM_DUMP 295 // arm is dumping the poms in the basket
 
-#define B_UP 1712 // up for the basket
+#define B_UP 1865 // up for the basket
 #define B_DOWN 1045 // down for the basket (dumping)
 
 #define P_UP 0 // push pom
@@ -14,9 +14,8 @@
 
 #define STOL 1
 #define TOL 2
-#define THRESH 575
-#define ET_DIST 600 // subject to change
-#define TH_DIST 125
+#define THRESH 450
+#define ET_DIST 635 // subject to change
 
 #define DIFF 100
 #define MID 950
@@ -37,7 +36,7 @@ struct robot {
 		int port;
 	}left , right;
 }lego;
- 
+
 struct blob {
 	struct color {
 		int x;
@@ -64,6 +63,7 @@ int get_right();
 int left_on();
 int middle_on();
 int right_on();
+int line_sensors(int cond1 , int cond2 , int cond3);
 int get_ET();
 int get_touch();
 int get_TH();
@@ -114,8 +114,8 @@ int main()
 	float start = seconds();
 	while (c_button() == 0)
 	{
-		set_servo_position(arm_servo , ARM_UP);
-		line_follow_back();
+		printf("%d\n" , analog10(ET_s));
+		msleep(10);
 	}
 	printf("%f\n" , seconds() - start);
 	//while (a_button() == 0);
@@ -127,7 +127,7 @@ int main()
 		target.green.y = get_object_center(0 , 0).y;
 		printf("(%d , %d)\n" , target.green.x , target.green.y);
 		printf("SERVO POS = %d\n" , get_servo_position(1));
-		
+	
 	}
 	while (b_button() == 0) // set target green size
 	{
@@ -151,10 +151,10 @@ int main()
 	int t = seconds();
 	int cyc = 0;
 	set_servo_position(basket_servo , B_UP);
+	set_servo_position(arm_servo , ARM_DUMP);
 	msleep(100);
-	while (a_button() == 0) 
-	update_blob();
-	shut_down_in(118);
+	while (a_button() == 0)
+		update_blob();
 	set_servo_position(basket_servo , B_UP);
 	msleep(100);
 	set_servo_position(arm_servo , ARM_SCAN);
@@ -164,23 +164,18 @@ int main()
 		update_blob();
 		t_line_follow();
 		cyc += 1;
-		if (cyc % 25 == 0)
-		{
-			turn_left(750);
-			msleep(450);
-		}
 		if (current.orange.size >= target.orange.size && current.green.size > target.green.size)
 		{
 			ao();
 			break;			
 		}
+		if (cyc % 4 == 0)
+		{
+			turn_left(550);
+			msleep(50);
+		}
 	}
-	turn_left(300);
-	msleep(100);
-	backward(300);
-	msleep(250);
 	get_pom(); // get first pom
-	pom_push();
 	nv_servo(arm_servo , ARM_SCAN);
 	move_back();
 	ao();
@@ -192,7 +187,7 @@ int main()
 	while (1) // turn to next pom
 	{
 		update_blob();
-		turn_right(300);
+		turn_right(200);
 		msleep(10);
 		if (current.green.size >= target.green.size && current.orange.size >= target.orange.size)
 		{
@@ -201,53 +196,41 @@ int main()
 		}
 	}
 	get_pom(); // get second pom
-	pom_push();
 	nv_servo(arm_servo , ARM_SCAN);
 	set_servo_position(basket_servo , B_UP);
 	turn_left(300);
 	msleep(500);
-	ac2();
+	avoid_cubeguy();
+	update_blob();
 	nv_servo(arm_servo , ARM_SCAN);
 	cyc = 0;
-	/*
 	while (1) // follow the line until a blob of orange and green is seen
 	{
 		update_blob();
-		t_line_follow();
+		line_follow_left();
 		cyc += 1;
-		if (cyc % 40 == 0)
+		if (cyc % 4 == 0)
 		{
-			turn_left(500);
-			msleep(200);
+			turn_left(550);
+			msleep(50);
 		}
 		if (current.orange.size >= target.orange.size && current.green.size > target.green.size)
-			break;
-	}
-	*/
-	while(1)
-	{
-		update_blob();
-		turn_left(300);
-		msleep(10);
-		if ((current.green.size >= target.green.size && current.orange.size >= target.orange.size) || current.green.size >= target.green.size)
 		{
 			ao();
 			break;
 		}
 	}
 	get_pom(); // get third pom
-	pom_push();
 	nv_servo(arm_servo , ARM_UP);
 	move_back();
 	backward(300);
-	msleep(500);
-	int start = seconds();
+	msleep(750);
 	while(1)
 	{
 		update_blob();
 		turn_right(300);
 		msleep(10);
-		if (seconds() - start >= 1)
+		if ((current.green.size >= target.green.size && current.orange.size >= target.orange.size) || current.green.size >= target.green.size)
 		{
 			ao();
 			break;
@@ -257,7 +240,6 @@ int main()
 	msleep(500);
 	nv_servo(arm_servo , ARM_SCAN);
 	get_pom(); // get fourth pom
-	pom_push();
 	move_back();
 	set_servo_position(basket_servo , B_UP);
 	ao();
@@ -266,6 +248,7 @@ int main()
 	nv_servo(arm_servo , ARM_SCAN);
 	while (1)
 	{
+		set_servo_position(arm_servo , ARM_SCAN);
 		line_follow_left();
 	}
 }
@@ -392,24 +375,32 @@ int get_right()
 int left_on()
 {
 	if (get_left() > THRESH)
-		return true;
+	return true;
 	if (get_left() <= THRESH)
-		return false;
+	return false;
 }
 
 int middle_on()
 {
 	if (get_middle() > THRESH)
-		return true;
+	return true;
 	if (get_middle() <= THRESH)
-		return false;
+	return false;
 }
 
 int right_on()
 {
 	if (get_right() > THRESH)
-		return true;
+	return true;
 	if (get_right() <= THRESH)
+	return false;
+}
+
+int line_sensors(int cond1 , int cond2 , int cond3)
+{
+	if (left_on() == cond1 && middle_on() == cond2 && right_on() == cond3)
+		return true;
+	else
 		return false;
 }
 
@@ -652,11 +643,17 @@ int get_pom()
 	y_count = 0;
 	xl_count = 0;
 	xr_count = 0;
+	int s = seconds();
 	while (1)
 	{
 		update_blob();
 		int x = camera_move_x();
 		int y = camera_move_y();
+		if (seconds() - s >= 15)
+		{
+			af();
+			break;
+		}
 		if (x == 0 && y == 0)
 		{
 			freeze(lego.left.port);
@@ -671,6 +668,7 @@ int get_pom()
 			msleep(500);
 			nv_servo(arm_servo , ARM_UP);
 			msleep(500);
+			pom_push();
 			break;
 		}
 	}
@@ -737,38 +735,18 @@ int avoid_cubeguy()
 			break;
 		}
 	}
-	while (1) 
-	{
-		turn_right(400);
-		msleep(10);
-		if (left_on() == false)
-		{	 
-			ao();
-			break;
-		}
-	}
-	turn_right(300);
+	turn_left(300);
 	msleep(1000);
 	ao();
 	msleep(100);
 	nv_servo(arm_servo , ARM_OUT);
 	msleep(500);
-	turn_left(300);
-	msleep(1000);
-	while (left_on() == true)
-	{
-		mav(lego.left.port , -700);
-		mav(lego.right.port , 700);
-		msleep(10);
-		if (left_on() == false)
-		{
-			break;
-		}
-	}
+	turn_right(300);
+	msleep(2500);
 	while (1)
 	{
-		mav(lego.left.port , 300);
-		mav(lego.right.port , -300);
+		mav(lego.left.port , -300);
+		mav(lego.right.port , 300);
 		msleep(10);
 		if (middle_on() == true)
 		{
@@ -829,7 +807,7 @@ int nv_servo(int s , int fpos)
 	{
 		while (cpos > fpos)
 		{
-			cpos -= 16;
+			cpos -= 12;
 			set_servo_position(s , cpos);
 			cpos = get_servo_position(s);
 			msleep(10);
@@ -842,7 +820,7 @@ int nv_servo(int s , int fpos)
 	{
 		while (cpos < fpos)
 		{
-			cpos += 16;
+			cpos += 12;
 			set_servo_position(s , cpos);
 			cpos = get_servo_position(s);
 			msleep(10);
@@ -852,5 +830,5 @@ int nv_servo(int s , int fpos)
 		return 0;		
 	}
 	if (cpos == fpos)
-		return 0;
+	return 0;
 }
