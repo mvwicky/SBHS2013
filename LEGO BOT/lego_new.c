@@ -155,6 +155,8 @@ int main()
 	msleep(100);
 	while (a_button() == 0)
 		update_blob();
+	shut_down_in(118);
+	float startTime = seconds();
 	set_servo_position(basket_servo , B_UP);
 	msleep(100);
 	set_servo_position(arm_servo , ARM_SCAN);
@@ -250,7 +252,52 @@ int main()
 	{
 		set_servo_position(arm_servo , ARM_SCAN);
 		line_follow_left();
+		if (line_sensors(1 , 1 , 1)) 
+		{
+			ao();
+			break;
+		}
 	}
+	while (1) 
+	{
+		turn_left(300);
+		msleep(10);
+		if (line_sensors(0 , 1 , 0))
+		{
+			ao();
+			break;
+		}
+	}
+	while(1)
+	{
+		msleep(10);
+		if (seconds() - startTime >= 111)
+		{
+			break;
+		}
+	}
+	float s = seconds();
+	while (1)
+	{
+		t_line_follow();
+		if (seconds() - s >= 5)
+		{
+			ao();
+			break;
+		}
+	}
+	turn_right(400);
+	msleep(1000);
+	nv_servo(arm_servo , ARM_UP);
+	nv_servo(basket_servo , B_DOWN);
+	turn_left(1000);
+	nv_servo(arm_servo , ARM_OUT);
+	backward(500);
+	msleep(2500);
+	turn_left(500);
+	msleep(750);
+	forward(600);
+	msleep(1000);
 }
 
 void af()
